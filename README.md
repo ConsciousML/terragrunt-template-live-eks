@@ -1,8 +1,8 @@
 # Terragrunt Template Live AWS
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![GitHub Release](https://img.shields.io/github/release/ConsciousML/terragrunt-template-live-aws.svg?style=flat)]()
-[![CI](https://github.com/ConsciousML/terragrunt-template-live-aws/actions/workflows/ci.yaml/badge.svg)](https://github.com/ConsciousML/terragrunt-template-live-aws/actions/workflows/ci.yaml)
+[![GitHub Release](https://img.shields.io/github/release/ConsciousML/terragrunt-template-live-eks.svg?style=flat)]()
+[![CI](https://github.com/ConsciousML/terragrunt-template-live-eks/actions/workflows/ci.yaml/badge.svg)](https://github.com/ConsciousML/terragrunt-template-live-eks/actions/workflows/ci.yaml)
 [![PR's Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat)](http://makeapullrequest.com)
 
 A prod-ready Terragrunt Template for deploying multi-environment IaC on AWS
@@ -26,7 +26,7 @@ This IaC production toolkit follows [Gruntwork's official patterns](https://gith
 You're new to Terragrunt best practices? Read [Gruntwork's official production patterns](https://github.com/gruntwork-io/terragrunt-infrastructure-catalog-example) to get the foundations required to use this extended repository.
 
 ## Getting Started
-**Protip**: Follow the getting started of the [catalog repository](https://github.com/ConsciousML/terragrunt-template-catalog-eks) first, as you'll need to configure it before using this live repository. 
+**Protip**: Follow the getting started of the [EKS catalog repository](https://github.com/ConsciousML/terragrunt-template-catalog-eks) first, as you'll need to configure it before using this live repository. 
 
 ### Prerequisites
 - AWS account with billing enabled
