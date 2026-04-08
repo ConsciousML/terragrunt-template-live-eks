@@ -5,7 +5,7 @@
 [![CI](https://github.com/ConsciousML/terragrunt-template-live-aws/actions/workflows/ci.yaml/badge.svg)](https://github.com/ConsciousML/terragrunt-template-live-aws/actions/workflows/ci.yaml)
 [![PR's Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat)](http://makeapullrequest.com)
 
-A prod-ready Terragrunt Template for deploying multi-environment IaC on AWS
+A prod-ready Terragrunt Template for deploying multi-environment [EKS](https://aws.amazon.com/eks/) clusters on AWS
 
 ## Catalog vs Live Infrastructure
 
@@ -18,7 +18,7 @@ This IaC production toolkit follows [Gruntwork's official patterns](https://gith
 
 ## What's Inside
 
-- Multi-environment IaC support
+- Multi-environment IaC support: build EKS cluster across `dev`, `staging`, and `prod`.
 - [CI](.github/workflows/ci.yaml) (on PR): Runs `terragrunt plan` on each environment, uploads output plan to PR, deploys on the staging environment, runs some tests, and destroys.
 - [CD](.github/workflows/cd.yaml) (on push `main`): Automatically deploys on `prod`
 - [Bootstrap pipeline](live/bootstrap/enable_tg_github_actions/) to automatically authenticate GitHub Actions with AWS.
@@ -31,26 +31,28 @@ You're new to Terragrunt best practices? Read [Gruntwork's official production p
 ### Prerequisites
 - AWS account with billing enabled
 - GitHub account
-- AWS IAM permissions to manage IAM roles, VPC resources, compute resources and S3 (see `policy_arns` in the [bootstrap stack](live/bootstrap/enable_tg_github_actions/terragrunt.stack.hcl) for a list of the specific IAM policies)
+- AWS IAM permissions to manage IAM roles, VPC resources, EKS resources, compute resources and S3 (see `policy_arns` in the [bootstrap stack](live/bootstrap/enable_tg_github_actions/terragrunt.stack.hcl) for a list of the specific IAM policies)
 
 ### Fork the Repositories (catalog and live)
 First, fork the catalog repository by following its [Fork the Repository section](https://github.com/ConsciousML/terragrunt-template-catalog-eks/#fork-the-repository).
 
 Next, you'll need to also fork this repository (live) and make a few changes:
 1. Click on `Use this template` to create your own repository
-2. Use your IDE of choice to replace every occurrence of `github.com/ConsciousML/terragrunt-template-catalog-eks` by your GitHub repo URL following the same format
+2. Use your IDE of choice to replace every occurrence of:
+- - `github.com/ConsciousML/terragrunt-template-catalog-eks` by your GitHub catalog repository (that you created in the first step of this section) URL following the same format
+- - `terragrunt-template-live-eks` by the name of your live repository (that you created in 1.)
 
-**Warning**: If you skip step 2, the TG source links will still point to the original repository (on `github.com/ConsciousML/`).
+**Warning**: If you skip step 2, the Terragrunt source links will still point to the original repository (on `github.com/ConsciousML/`).
 
 ### Installation
 
-**Option 1: Use mise (recommended)**
+**Option 1: Use `mise` (recommended)**
 
 First, `cd` at the root of this repository. 
 
 Next, install mise:
 ```bash
-curl https://mise.run | sh
+curl https://mise.run | MISE_VERSION=v2026.4.0 sh
 ```
 
 Then, install all the tools in the `mise.toml` file:
@@ -90,16 +92,42 @@ For more information, read the [AWS CLI authentication documentation](https://do
 
 Next, for each directory in `live/` (i.e `bootstrap/`, `dev/`, etc.), change `region.hcl` to match your desired AWS region.
 
-### Deploy Dev Infrastructure Manually
-Deploy the `dev` that creates a VPC and deploys an EC2 instance in a subnet:
+### Deploy a Dev EKS Cluster
+Deploy the `dev` environment that creates a VPC and deploys an EKS cluster inside it:
 ```bash
 cd live/dev
 terragrunt stack generate
 terragrunt stack run apply --backend-bootstrap --non-interactive
 ```
 
-- Go into the AWS console and check that your resources have been created
-- Then cleanup by destroying the infrastructure (cwd in `live/dev/`):
+Go into the AWS console and check that your resources have been created.
+
+After around 15 min, your `dev` EKS cluster will be created.
+
+To connect `kubectl` to your EKS cluster, create a `kubeconfig` file by running the following and replacing `<region-code>` and `<cluster-name>`:
+```bash
+aws eks update-kubeconfig --region <region-code> --name <cluster-name>
+```
+
+Next, verify `kubectl` is connected:
+```
+kubectl get pods -n kube-system
+```
+
+You should see and output similar to:
+```text
+NAME                           READY   STATUS    RESTARTS   AGE
+aws-node-59ld8                 2/2     Running   0          41m
+aws-node-5bvc4                 2/2     Running   0          41m
+coredns-845b86cddf-pg8hk       1/1     Running   0          40m
+coredns-845b86cddf-vngdb       1/1     Running   0          40m
+eks-pod-identity-agent-9pq6k   1/1     Running   0          41m
+eks-pod-identity-agent-fzfk9   1/1     Running   0          41m
+kube-proxy-khhsj               1/1     Running   0          40m
+kube-proxy-pvh7h               1/1     Running   0          40m
+```
+
+Finally, cleanup by destroying the infrastructure (cwd in `live/dev/`):
 
 ```bash
 terragrunt stack generate
