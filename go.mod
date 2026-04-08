@@ -1,4 +1,4 @@
-module github.com/ConsciousML/terragrunt-template-live-eks
+module github.com/ConsciousML/terragrunt-template-live-aws
 
 go 1.26
 
