@@ -3,7 +3,7 @@ locals {
 }
 
 stack "vpc_ec2" {
-  source = "github.com/ConsciousML/terragrunt-template-catalog-aws//stacks/vpc_ec2?ref=${local.version}"
+  source = "github.com/ConsciousML/terragrunt-template-catalog-eks//stacks/vpc_ec2?ref=${local.version}"
   path   = "infrastructure"
   values = {
     version            = local.version

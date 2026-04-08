@@ -4,9 +4,9 @@
 
 Authenticates GitHub Actions with AWS to deploy infrastructure with Terragrunt in your workflows.
 
-The bootstrap pipeline has been develop in the [catalog repository](https://github.com/ConsciousML/terragrunt-template-catalog-aws). We will simply call the stack in the current repository (live).
+The bootstrap pipeline has been develop in the [catalog repository](https://github.com/ConsciousML/terragrunt-template-catalog-eks). We will simply call the stack in the current repository (live).
 
-For a detailed explanation of what this bootstrap stack does and its architecture, see the [catalog bootstrap documentation](https://github.com/ConsciousML/terragrunt-template-catalog-aws/tree/main/bootstrap/README.md).
+For a detailed explanation of what this bootstrap stack does and its architecture, see the [catalog bootstrap documentation](https://github.com/ConsciousML/terragrunt-template-catalog-eks/tree/main/bootstrap/README.md).
 
 ## Prerequisites
 - Same prerequisites as the [root README.md](../README.md#prerequisites)
@@ -14,7 +14,7 @@ For a detailed explanation of what this bootstrap stack does and its architectur
 
 ## Configuration
 
-Open `live/bootstrap/enable_tg_github_actions/terragrunt.stack.hcl` and update it according to the [configuration documentation](https://github.com/ConsciousML/terragrunt-template-catalog-aws/blob/main/bootstrap/README.md#configuration)
+Open `live/bootstrap/enable_tg_github_actions/terragrunt.stack.hcl` and update it according to the [configuration documentation](https://github.com/ConsciousML/terragrunt-template-catalog-eks/blob/main/bootstrap/README.md#configuration)
 
 Update the `live/bootstrap/region.hcl` to match your desired AWS region.
 

@@ -12,7 +12,7 @@ A prod-ready Terragrunt Template for deploying multi-environment IaC on AWS
 This is a **live repository** for deploying infrastructure across multiple environments.
 
 This IaC production toolkit follows [Gruntwork's official patterns](https://github.com/gruntwork-io/terragrunt-infrastructure-live-example) by using two template repositories:
-- **Catalog repository**: Defines **what** can be deployed (reusable components: [modules, units, and stacks](https://github.com/ConsciousML/terragrunt-template-catalog-aws))
+- **Catalog repository**: Defines **what** can be deployed (reusable components: [modules, units, and stacks](https://github.com/ConsciousML/terragrunt-template-catalog-eks))
 - **This repository** (live): Defines **where** and **how** catalog components are deployed in `dev`, `staging`, and `prod` environments with CI/CD
 
 
@@ -26,7 +26,7 @@ This IaC production toolkit follows [Gruntwork's official patterns](https://gith
 You're new to Terragrunt best practices? Read [Gruntwork's official production patterns](https://github.com/gruntwork-io/terragrunt-infrastructure-catalog-example) to get the foundations required to use this extended repository.
 
 ## Getting Started
-**Protip**: Follow the getting started of the [catalog repository](https://github.com/ConsciousML/terragrunt-template-catalog-aws) first, as you'll need to configure it before using this live repository. 
+**Protip**: Follow the getting started of the [catalog repository](https://github.com/ConsciousML/terragrunt-template-catalog-eks) first, as you'll need to configure it before using this live repository. 
 
 ### Prerequisites
 - AWS account with billing enabled
@@ -34,11 +34,11 @@ You're new to Terragrunt best practices? Read [Gruntwork's official production p
 - AWS IAM permissions to manage IAM roles, VPC resources, compute resources and S3 (see `policy_arns` in the [bootstrap stack](live/bootstrap/enable_tg_github_actions/terragrunt.stack.hcl) for a list of the specific IAM policies)
 
 ### Fork the Repositories (catalog and live)
-First, fork the catalog repository by following its [Fork the Repository section](https://github.com/ConsciousML/terragrunt-template-catalog-aws/#fork-the-repository).
+First, fork the catalog repository by following its [Fork the Repository section](https://github.com/ConsciousML/terragrunt-template-catalog-eks/#fork-the-repository).
 
 Next, you'll need to also fork this repository (live) and make a few changes:
 1. Click on `Use this template` to create your own repository
-2. Use your IDE of choice to replace every occurrence of `github.com/ConsciousML/terragrunt-template-catalog-aws` by your GitHub repo URL following the same format
+2. Use your IDE of choice to replace every occurrence of `github.com/ConsciousML/terragrunt-template-catalog-eks` by your GitHub repo URL following the same format
 
 **Warning**: If you skip step 2, the TG source links will still point to the original repository (on `github.com/ConsciousML/`).
 
@@ -141,12 +141,12 @@ require.Equal(t, 200, resp.StatusCode)
 
 Tests run automatically in CI when the `run-terratest` label is added to your PR. See the [CI/CD guide](docs/ci_cd.md) for details.
 
-For more information on testing, read the [Terragrunt Catalog AWS documentation](https://github.com/ConsciousML/terragrunt-template-catalog-aws/blob/main/tests/README.md).
+For more information on testing, read the [Terragrunt Catalog AWS documentation](https://github.com/ConsciousML/terragrunt-template-catalog-eks/blob/main/tests/README.md).
 
 ## Related Documentation
 
-- [Catalog Repository](https://github.com/ConsciousML/terragrunt-template-catalog-aws): Reusable IaC components
-- [Bootstrap Setup](https://github.com/ConsciousML/terragrunt-template-catalog-aws/tree/main/bootstrap/README.md): Detailed GitHub Actions setup
+- [Catalog Repository](https://github.com/ConsciousML/terragrunt-template-catalog-eks): Reusable IaC components
+- [Bootstrap Setup](https://github.com/ConsciousML/terragrunt-template-catalog-eks/tree/main/bootstrap/README.md): Detailed GitHub Actions setup
 - [Terragrunt Documentation](https://terragrunt.gruntwork.io/docs/): Official Terragrunt docs
 - [Gruntwork Infrastructure Patterns](https://github.com/gruntwork-io/terragrunt-infrastructure-live-example): Reference architecture
 

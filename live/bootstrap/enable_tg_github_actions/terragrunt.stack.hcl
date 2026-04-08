@@ -2,11 +2,11 @@ locals {
   version = "main"
 
   github_repo_name         = "terragrunt-template-live-aws"
-  github_repo_catalog_name = "terragrunt-template-catalog-aws"
+  github_repo_catalog_name = "terragrunt-template-catalog-eks"
 }
 
 stack "enable_tg_github_actions" {
-  source = "github.com/ConsciousML/terragrunt-template-catalog-aws//stacks/enable_tg_github_actions?ref=${local.version}"
+  source = "github.com/ConsciousML/terragrunt-template-catalog-eks//stacks/enable_tg_github_actions?ref=${local.version}"
   path   = "github_actions_bootstrap"
   values = {
     version          = local.version
