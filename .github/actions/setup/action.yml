@@ -1,0 +1,41 @@
+name: 'Setup to run Terragrunt'
+description: 'A composite action to setup all the required resources to run Terragrunt in AWS'
+
+inputs:
+  deploy-keys:
+    description: 'SSH private keys secret names (i.e DEPLOY_KEY) for deploy key access (can be multiple keys separated by newlines)'
+    required: true
+  role-to-assume:
+    description: 'ARN of the IAM role to assume for AWS authentication'
+    required: true
+  aws-region:
+    description: 'AWS region to use'
+    required: true
+
+runs:
+  using: 'composite'
+  steps:
+    # Use deploy key for Terragrunt to pull private repositories
+    - uses: webfactory/ssh-agent@v0.9.0
+      with:
+        ssh-private-key: ${{ inputs.deploy-keys }}
+
+    # Use OIDC to authenticate GitHub Actions with AWS
+    # Terragrunt needs permissions from AWS to run plan and apply
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@main
+      with:
+        role-to-assume: ${{ inputs.role-to-assume }}
+        aws-region: ${{ inputs.aws-region }}
+
+    # Mise enable to install all the tools we need (Terragrunt, OpenTofu, Go, ...)
+    # See `mise.toml`.
+    - name: Install mise
+      uses: jdx/mise-action@v4
+      with:
+        version: 2026.4.0
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.13.1'

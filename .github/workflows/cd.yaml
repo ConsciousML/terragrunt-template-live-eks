@@ -1,0 +1,90 @@
+name: Apply on Production Environment
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: cd-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  id-token: 'write'
+  pull-requests: read
+
+jobs:
+  check-skip-cd:
+    runs-on: ubuntu-latest
+    outputs:
+      should_skip: ${{ steps.check-label.outputs.skip_cd }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Get commit SHA
+        id: get-sha
+        run: |
+          SHA_COMMIT=$(git rev-parse HEAD)
+          echo "SHA_COMMIT=$SHA_COMMIT" >> $GITHUB_OUTPUT
+          echo "Commit SHA: $SHA_COMMIT"
+
+      - name: Find PR number for commit
+        id: find-pr
+        run: |
+          PR_NUMBER=$(gh pr list --search ${{ steps.get-sha.outputs.SHA_COMMIT }} --state all --json number --jq '.[0].number')
+          echo "PR_NUMBER=$PR_NUMBER" >> $GITHUB_OUTPUT
+          echo "PR number: $PR_NUMBER"
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Check for skip-cd label
+        id: check-label
+        run: |
+          PR_NUMBER="${{ steps.find-pr.outputs.PR_NUMBER }}"
+
+          if [ -z "$PR_NUMBER" ] || [ "$PR_NUMBER" = "null" ]; then
+            echo "⚠️  No PR found for this commit - skipping CD as safety measure"
+            SKIP_CD=true
+          else
+            echo "Checking labels on PR #$PR_NUMBER"
+            SKIP_CD=$(gh pr view $PR_NUMBER --json labels --jq 'any(.labels[].name; . == "skip-cd")')
+
+            if [ "$SKIP_CD" = "true" ]; then
+              echo "⏭️  Found 'skip-cd' label - deployment will be skipped"
+            else
+              echo "✅ No 'skip-cd' label - deployment will proceed"
+            fi
+          fi
+
+          echo "skip_cd=$SKIP_CD" >> $GITHUB_OUTPUT
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+  terragrunt-apply-prod:
+    runs-on: ubuntu-latest
+    needs: check-skip-cd
+    if: needs.check-skip-cd.outputs.should_skip != 'true'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4 
+
+      # Installs all required tools (`mise.toml`)
+      # Authenticates with AWS
+      # Sets up deploy keys to pull external repositories when running Terragrunt
+      - uses: ./.github/actions/setup
+        with:
+          deploy-keys: |
+            ${{ secrets.DEPLOY_KEY_TG_LIVE }}
+            ${{ secrets.DEPLOY_KEY_TG_CATALOG }}
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}   
+
+      - name: Terragrunt apply on prod
+        run: |
+          cd live/prod
+          terragrunt stack generate
+          terragrunt run --all init --no-stack-generate --backend-bootstrap --non-interactive
+          terragrunt run --all apply --no-stack-generate --non-interactive
