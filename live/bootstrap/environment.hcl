@@ -1,3 +1,3 @@
 locals {
-  environment = "bootstrap-live"
+  environment = "bootstrap-live-eks"
 }

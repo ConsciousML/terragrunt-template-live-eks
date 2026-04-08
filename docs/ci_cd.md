@@ -51,7 +51,7 @@ Runs automatically when a PR is **merged to `main`** and deploys changes to the 
 ## Setup
 
 ### Initial Setup
-Follow the [bootstrap guide](https://github.com/ConsciousML/terragrunt-template-catalog-aws/tree/main/bootstrap/enable_tg_github_actions) once to:
+Follow the [bootstrap guide](https://github.com/ConsciousML/terragrunt-template-catalog-eks/tree/main/bootstrap/enable_tg_github_actions) once to:
 - Configure GitHub Actions authentication with AWS
 - Create a IAM Role with the required policies
 - Set up deploy keys for private repository access
@@ -63,7 +63,7 @@ Follow the [bootstrap guide](https://github.com/ConsciousML/terragrunt-template-
    git checkout -b feature/update-instance-size
    ```
 
-2. Make changes into the Terraform code, units, and stacks in the catalog repository by following its [development workflow](https://github.com/ConsciousML/terragrunt-template-catalog-aws/blob/main/docs/development.md).
+2. Make changes into the Terraform code, units, and stacks in the catalog repository by following its [development workflow](https://github.com/ConsciousML/terragrunt-template-catalog-eks/blob/main/docs/development.md).
 
 3. Next, update a stack configuration or add a new stack. For example:
 ```hcl
@@ -73,7 +73,7 @@ locals {
 }
 
 stack "vpc_ec2" {
-  source = "github.com/ConsciousML/terragrunt-template-catalog-aws//stacks/vpc_ec2?ref=${local.version}"
+  source = "github.com/ConsciousML/terragrunt-template-catalog-eks//stacks/vpc_ec2?ref=${local.version}"
   path   = "infrastructure"
 
   values = {
