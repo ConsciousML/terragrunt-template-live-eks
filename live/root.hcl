@@ -5,12 +5,12 @@ locals {
   # Load environment related variables (dev, staging, prod, ...)
   environment_vars = read_terragrunt_config(find_in_parent_folders("environment.hcl"))
 
+  aws_region  = local.region_vars.locals.region
+  environment = local.environment_vars.locals.environment
+
   github_locals            = read_terragrunt_config(find_in_parent_folders("github.hcl")).locals
   github_username_catalog  = local.github_locals.github_username_catalog
   github_repo_name_catalog = local.github_locals.github_repo_name_catalog
-
-  aws_region  = local.region_vars.locals.region
-  environment = local.environment_vars.locals.environment
 }
 
 # Configure AWS backend for storing Terraform state files
@@ -34,28 +34,11 @@ remote_state {
 }
 
 generate "provider" {
-  path      = "providers.tf"
+  path      = "providers_aws.tf"
   if_exists = "overwrite"
   contents  = <<EOF
 provider "aws" {
   region = "${local.aws_region}"
-}
-EOF
-}
-
-generate "versions" {
-  path      = "versions.tf"
-  if_exists = "overwrite"
-  contents  = <<EOF
-terraform {
-  required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = "~> 6.0"
-    }
-  }
-
-  required_version = ">= 1.9.1"
 }
 EOF
 }
