@@ -75,6 +75,7 @@ jobs:
       # Installs all required tools (`mise.toml`)
       # Authenticates with AWS
       # Sets up deploy keys to pull external repositories when running Terragrunt
+      # Connects to Tailscale — required by the Tailscale provider during plan
       - uses: ./.github/actions/setup
         with:
           deploy-keys: |
@@ -82,6 +83,9 @@ jobs:
             ${{ secrets.DEPLOY_KEY_TG_CATALOG }}
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ secrets.AWS_REGION }}
+          ts-oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          ts-audience: ${{ secrets.TS_AUDIENCE }}
+          ts-tags: ${{ secrets.TS_TAGS }}
 
       - name: Install aha to convert plan output to html
         run: sudo apt-get install aha
