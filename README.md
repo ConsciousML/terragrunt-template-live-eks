@@ -34,15 +34,20 @@ You're new to Terragrunt best practices? Read [Gruntwork's official production p
 - AWS IAM permissions to manage IAM roles, VPC resources, EKS resources, compute resources and S3 (see `policy_arns` in the [bootstrap stack](live/bootstrap/enable_tg_github_actions/terragrunt.stack.hcl) for a list of the specific IAM policies)
 
 ### Fork the Repositories (catalog and live)
-First, fork the catalog repository by following its [Fork the Repository section](https://github.com/ConsciousML/terragrunt-template-catalog-eks/#fork-the-repository).
+1. Fork the catalog repository by following its [Fork the Repository section](https://github.com/ConsciousML/terragrunt-template-catalog-eks/#fork-the-repository).
+2. Fork this repository (livk) by clicking on `Use this template`
 
-Next, you'll need to also fork this repository (live) and make a few changes:
-1. Click on `Use this template` to create your own repository
-2. Use your IDE of choice to replace every occurrence of:
-- - `github.com/ConsciousML/terragrunt-template-catalog-eks` by your GitHub catalog repository (that you created in the first step of this section) URL following the same format
-- - `terragrunt-template-live-eks` by the name of your live repository (that you created in 1.)
-
-**Warning**: If you skip step 2, the Terragrunt source links will still point to the original repository (on `github.com/ConsciousML/`).
+### Configuration
+1. In `live/github.hcl`, modify:
+```hcl
+locals {
+  github_username_catalog  = "YourUsernameWhereYourCatalogForkIs"
+  github_username_live     = "YourUsernameWhereYourLiveForkIs"
+  github_repo_name_catalog = "your-catalog-repo-name"
+  github_repo_name_live    = "your-live-repo-name"
+}
+```
+If you've forked both repositories, `github_username_catalog` and `github_username_live` should point to your username (`ConsciousML` for my own forks). 
 
 ### Installation
 
