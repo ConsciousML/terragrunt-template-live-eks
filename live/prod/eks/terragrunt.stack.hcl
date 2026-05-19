@@ -4,11 +4,13 @@ locals {
   version_cluster = "21.15.1"
   version_vpc     = "6.6.0"
 
-  github_repo_catalog_name = "terragrunt-template-catalog-eks"
+  github_locals            = read_terragrunt_config(find_in_parent_folders("github.hcl")).locals
+  github_username_catalog  = local.github_locals.github_username_catalog
+  github_repo_name_catalog = local.github_locals.github_repo_name_catalog
 }
 
 unit "vpc" {
-  source = "github.com/ConsciousML/${local.github_repo_catalog_name}//units/vpc_eks?ref=${local.version_catalog}"
+  source = "github.com/${local.github_username_catalog}/${local.github_repo_name_catalog}//units/vpc_eks?ref=${local.version_catalog}"
   path   = "vpc_eks"
 
   values = {
@@ -41,7 +43,7 @@ unit "vpc" {
 }
 
 unit "cluster" {
-  source = "github.com/ConsciousML/${local.github_repo_catalog_name}//units/eks_cluster?ref=${local.version_catalog}"
+  source = "github.com/${local.github_username_catalog}/${local.github_repo_name_catalog}//units/eks_cluster?ref=${local.version_catalog}"
   path   = "eks_cluster"
 
   values = {
