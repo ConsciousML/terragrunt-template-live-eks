@@ -1,3 +1,3 @@
 locals {
-  environment = "staging-live-eks"
+  environment = "staging"
 }

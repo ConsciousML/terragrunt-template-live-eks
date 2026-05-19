@@ -1,3 +1,3 @@
 locals {
-  environment = "prod-live-eks"
+  environment = "prod"
 }
