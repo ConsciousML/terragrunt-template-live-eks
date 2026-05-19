@@ -1,6 +1,8 @@
 # Tailscale Bootstrap
 
-Creates a Tailscale WIF credential and writes `TS_OAUTH_CLIENT_ID`, `TS_AUDIENCE`, and `TS_TAGS` to the live repo's GitHub secrets so CI can authenticate to Tailscale during Terratest runs. See the [catalog README](https://github.com/ConsciousML/terragrunt-template-catalog-eks/blob/main/pipelines/bootstrap/tailscale/README.md) for the full Tailscale setup flow.
+Creates a Tailscale WIF credential and writes `TS_OAUTH_CLIENT_ID`, `TS_AUDIENCE`, and `TS_TAGS` to the live repo's GitHub secrets so CI can authenticate to Tailscale during Terratest runs.
+
+See the [catalog README](https://github.com/ConsciousML/terragrunt-template-catalog-eks/blob/main/pipelines/bootstrap/tailscale/README.md) for the full Tailscale setup flow.
 
 ## Prerequisites
 - Follow the [installation instructions](../../../README.md#installation)

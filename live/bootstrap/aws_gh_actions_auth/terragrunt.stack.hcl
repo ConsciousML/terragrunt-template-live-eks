@@ -1,5 +1,5 @@
 locals {
-  version = "v0.0.2"
+  version = "v0.0.5"
 
   github_locals            = read_terragrunt_config(find_in_parent_folders("github.hcl")).locals
   github_username_catalog  = local.github_locals.github_username_catalog
@@ -7,11 +7,11 @@ locals {
   github_repo_name_live    = local.github_locals.github_repo_name_live
   github_repo_name_catalog = local.github_locals.github_repo_name_catalog
 
-  github_token = get_env("TF_VAR_github_token")
+  github_token = get_env("GITHUB_TOKEN")
 }
 
-stack "enable_tg_github_actions" {
-  source = "github.com/${local.github_username_catalog}/${local.github_repo_name_catalog}//stacks/enable_tg_github_actions?ref=${local.version}"
+stack "aws_gh_actions_auth" {
+  source = "github.com/${local.github_username_catalog}/${local.github_repo_name_catalog}//stacks/aws_gh_actions_auth?ref=${local.version}"
   path   = "github_actions_bootstrap"
   values = {
     version          = local.version
@@ -20,14 +20,7 @@ stack "enable_tg_github_actions" {
     github_token     = local.github_token
     iam_role_name    = "gh-tg-live-eks-role"
     policy_arns = [
-      "arn:aws:iam::aws:policy/AmazonEC2FullAccess",
-      "arn:aws:iam::aws:policy/AmazonVPCFullAccess",
-      "arn:aws:iam::aws:policy/IAMFullAccess",
-      "arn:aws:iam::aws:policy/AmazonS3FullAccess",
-      "arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess",
-      "arn:aws:iam::aws:policy/AmazonSSMReadOnlyAccess",
-      "arn:aws:iam::aws:policy/CloudWatchLogsFullAccess",
-      "arn:aws:iam::aws:policy/AWSKeyManagementServicePowerUser"
+      "arn:aws:iam::aws:policy/AdministratorAccess",
     ]
     inline_policies = [
       {
@@ -76,6 +69,10 @@ stack "enable_tg_github_actions" {
                 "eks:DisassociateIdentityProviderConfig",
                 "eks:DescribeIdentityProviderConfig",
                 "eks:ListIdentityProviderConfigs",
+                "eks:CreatePodIdentityAssociation",
+                "eks:DeletePodIdentityAssociation",
+                "eks:DescribePodIdentityAssociation",
+                "eks:ListPodIdentityAssociations",
               ]
               Resource = "*"
             }
@@ -87,17 +84,14 @@ stack "enable_tg_github_actions" {
     oidc_url             = "https://token.actions.githubusercontent.com"
     oidc_client_id_list  = ["sts.amazonaws.com"]
     oidc_thumbprint_list = []
-
-    # OIDC provider must be unique and is created in the catalog template
     create_oidc_provider = false
-
     deploy_key_repositories = [
-      local.github_repo_name,
-      local.github_repo_name_catalog
+      local.github_repo_name_live,
+      local.github_repo_name_catalog,
     ]
     deploy_key_secret_names = [
       "DEPLOY_KEY_TG_LIVE",
-      "DEPLOY_KEY_TG_CATALOG"
+      "DEPLOY_KEY_TG_CATALOG",
     ]
     deploy_key_title = "Terragrunt Live EKS Deploy Key"
   }

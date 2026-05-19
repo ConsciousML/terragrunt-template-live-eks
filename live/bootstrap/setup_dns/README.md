@@ -1,6 +1,8 @@
 # DNS Bootstrap
 
-Creates a public Route 53 hosted zone per environment. See the [catalog README](https://github.com/ConsciousML/terragrunt-template-catalog-eks/blob/main/pipelines/bootstrap/setup_dns/README.md) for the full DNS flow, zone purpose, and NS delegation steps.
+Creates a public Route 53 hosted zone per environment.
+
+See the [catalog README](https://github.com/ConsciousML/terragrunt-template-catalog-eks/blob/main/pipelines/bootstrap/setup_dns/README.md) for the full DNS flow and zone purpose.
 
 ## Structure
 
@@ -14,7 +16,10 @@ live/bootstrap/setup_dns/
     terragrunt.stack.hcl
 ```
 
-`live/dns.hcl` (at the live root) sets `base_domain` and `subdomain`, producing hosted zone names like `argocd.staging.axelmendoza.com`.
+## Prerequisites
+
+- Follow the [installation instructions](../../../README.md#installation)
+- Same [prerequisites](../../../README.md#prerequisites) as in the main `README.md`
 
 ## Deploy
 
@@ -34,7 +39,7 @@ terragrunt stack output --json setup_dns.route53_hosted_zone.name_servers
 
 ### Delegate the subdomain
 
-In your domain registrar, add 4 NS records for the subdomain using the nameservers above.
+In your domain registrar, add 4 NS records for `{subdomain}.{environment}` using the nameservers above:
 
 | Type | Host | Value |
 |------|------|-------|
