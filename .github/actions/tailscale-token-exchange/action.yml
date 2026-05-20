@@ -1,0 +1,46 @@
+name: 'Tailscale WIF token exchange'
+description: 'Exchanges a GitHub OIDC JWT for a short-lived Tailscale API token via WIF'
+
+inputs:
+  oauth-client-id:
+    description: 'Tailscale WIF OAuth client ID'
+    required: true
+  audience:
+    description: 'Tailscale WIF audience (api.tailscale.com/<client_id>)'
+    required: true
+
+outputs:
+  ts_token:
+    description: 'Short-lived Tailscale API token'
+    value: ${{ steps.exchange.outputs.ts_token }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Get Tailscale identity token
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const token = await core.getIDToken('${{ inputs.audience }}')
+          core.setSecret(token)
+          core.exportVariable('TAILSCALE_IDENTITY_TOKEN', token)
+          core.exportVariable('TAILSCALE_OAUTH_CLIENT_ID', '${{ inputs.oauth-client-id }}')
+
+    - name: Exchange OIDC token for Tailscale API token
+      id: exchange
+      shell: bash
+      run: |
+        response=$(curl -X POST https://api.tailscale.com/api/v2/oauth/token-exchange \
+          -H "Content-Type: application/x-www-form-urlencoded" \
+          -d "client_id=$TAILSCALE_OAUTH_CLIENT_ID" \
+          -d "jwt=$TAILSCALE_IDENTITY_TOKEN")
+
+        ts_token=$(echo "$response" | jq -r '.access_token')
+
+        if [ -z "$ts_token" ] || [ "$ts_token" = "null" ]; then
+          echo "ERROR: token exchange failed"
+          exit 1
+        fi
+
+        echo "::add-mask::$ts_token"
+        echo "ts_token=$ts_token" >> $GITHUB_OUTPUT
