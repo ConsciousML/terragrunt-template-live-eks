@@ -4,23 +4,17 @@
 
 The [CI](../.github/workflows/ci.yaml) and [CD](../.github/workflows/cd.yaml) workflows automate infrastructure validation, testing, and deployment on every pull request and merge.
 
-They ensure that:
-- Infrastructure changes are validated before reaching production
-- All environments (dev, staging, prod) are tested
-- Production deployments are reviewed
-- Infrastructure can be deployed and destroyed correctly
-
 ## How It Works
 
 ### Continuous Integration (CI)
 
-Runs automatically on every pull request to `main` and is composed of four jobs:
+Runs automatically on every pull request to `main` and is composed of seven jobs:
 
 #### 1. HCL Format Check
 Validates that all Terragrunt (`.hcl`) files are properly formatted.
 
 #### 2. Validate & Plan
-Runs in parallel across **dev**, **staging**, and **prod** environments:
+Runs in parallel across **staging** and **prod** environments:
 - Generates stack configurations
 - Initializes Terragrunt with backend bootstrapping
 - Validates Terraform/OpenTofu syntax
@@ -28,15 +22,19 @@ Runs in parallel across **dev**, **staging**, and **prod** environments:
 
 For the **production environment**, the plan output is converted to HTML and uploaded as a downloadable artifact for review.
 
-#### 3. Terratest
-Runs infrastructure tests when the `run-terratest` label is added to the PR:
+#### 3. Terratest Label Gate
+After validate & plan, CI checks that the PR has exactly one of two labels before proceeding. **This is a hard gate — CI fails if neither label is present:**
+- `run-terratest`: infrastructure tests will run
+- `skip-terratest`: infrastructure tests will be skipped
+
+#### 4. Terratest
+Runs only when the `run-terratest` label is present:
 - Deploys the AWS infrastructure to the staging environment
 - Runs Go-based validation tests
 - Automatically destroys all test resources
+- Tailscale credentials are provisioned for the duration of the test and revoked immediately after
 
-If you want to skip the testing phase, add the `skip-terratest` label to the PR.
-
-#### 4. Comment on PR
+#### 5. Comment on PR
 Posts a comment with:
 - Link to the production plan artifact
 - Commit SHA that was tested
@@ -92,14 +90,10 @@ stack "vpc_ec2" {
    - Download and review the **production plan artifact** (linked in PR comment)
    - The plan shows exactly what will be created, modified, or destroyed
 
-6. Add the `run-terratest` label:
-   - Tests deploy real infrastructure to staging
-   - Validates functionality end-to-end
-   - Automatically cleans up resources
-   - Use this before merging significant changes
-
-7. Optionally, add the `skip-terratest` if you do not want to deploy the infrastructure on staging.
+6. Add a label — **required before CI can complete**:
+   - `run-terratest`: deploys real infrastructure to staging, validates end-to-end, and cleans up automatically — use this before merging significant changes
+   - `skip-terratest`: skips the staging deployment
 
 7. Review and merge.
 
-8. CD automatically deploys to production after merge completes
+8. CD automatically deploys to production after merge completes.
