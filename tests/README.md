@@ -1,7 +1,7 @@
 # Test Terragrunt Stacks With Terratest
 
-## Installation
-Follow the [installation instructions](../README.md#installation).
+## Prerequisites 
+Perform the [quickstart](../../../README.md#getting-started) up to `Authenticate with AWS` (included).
 
 ## What It Tests
 `TestStack` deploys the [staging EKS stack](../live/staging/eks/terragrunt.stack.hcl) end-to-end and validates:

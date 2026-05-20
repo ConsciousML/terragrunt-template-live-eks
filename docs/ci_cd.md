@@ -28,6 +28,8 @@ After validate & plan, CI checks that the PR has exactly one of two labels befor
 - `skip-terratest`: infrastructure tests will be skipped
 
 #### 4. Terratest
+See the [Terratest guide](../tests/README.md) for details on what is tested and how to extend it.
+
 Runs only when the `run-terratest` label is present:
 - Deploys the AWS infrastructure to the staging environment
 - Runs Go-based validation tests
