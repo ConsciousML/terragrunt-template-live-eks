@@ -17,7 +17,7 @@ permissions:
 
 jobs:
   check-skip-cd:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       should_skip: ${{ steps.check-label.outputs.skip_cd }}
     steps:
@@ -64,7 +64,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
 
   terragrunt-apply-prod:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: check-skip-cd
     if: needs.check-skip-cd.outputs.should_skip != 'true'
     steps:
@@ -85,6 +85,5 @@ jobs:
       - name: Terragrunt apply on prod
         run: |
           cd live/prod
-          terragrunt stack generate
-          terragrunt run --all init --no-stack-generate --backend-bootstrap --non-interactive
-          terragrunt run --all apply --no-stack-generate --non-interactive
+          terragrunt stack run init
+          terragrunt run --all apply --backend-bootstrap --non-interactive

@@ -25,7 +25,7 @@ env:
 
 jobs:
   check-if-pr-is-draft:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Fail if PR is in draft mode
         if: github.event.pull_request.draft == true
@@ -34,7 +34,7 @@ jobs:
           exit 1
 
   code-quality-checks:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: check-if-pr-is-draft
     steps:
       - name: Checkout code
@@ -60,7 +60,7 @@ jobs:
         uses: pre-commit/action@v3.0.1
 
   terragrunt-validate-plan:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: code-quality-checks
     strategy:
       matrix:
@@ -121,7 +121,7 @@ jobs:
   check-pr-labels:
     # Gates the terratest run: ensures exactly one of 'run-terratest' or 'skip-terratest' is present on the PR
     needs: terragrunt-validate-plan
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       should_run: ${{ steps.set-output.outputs.should_run }}
 
@@ -183,7 +183,7 @@ jobs:
     # Performs some tests and then destroys the infra.
     needs: check-pr-labels
     if: needs.check-pr-labels.outputs.should_run == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       client_id: ${{ steps.ts-oauth-create.outputs.client_id }}
 
@@ -259,7 +259,7 @@ jobs:
     # Runs even when terratest fails to ensure no credentials are left behind.
     needs: [check-pr-labels, terratest]
     if: always() && needs.check-pr-labels.outputs.should_run == 'true' && needs.terratest.outputs.client_id != ''
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
       - name: Checkout code
@@ -287,7 +287,7 @@ jobs:
           fi
 
   comment-tg-plan-on-pr:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: [terragrunt-validate-plan, revoke-oauth]
     if: always() && needs.terragrunt-validate-plan.result == 'success'
 
