@@ -22,7 +22,7 @@ go get github.com/aws/aws-sdk-go-v2/service/secretsmanager
 go mod tidy
 ```
 
-Set up `AWS_REGION` and the Tailscale variables following the [environment variables guide](../docs/environment-variables.md), then run:
+Follow the [environment variables guide](https://github.com/ConsciousML/terragrunt-template-catalog-eks/blob/main/docs/environment-variables.md), then run:
 
 ```bash
 source .env

@@ -17,7 +17,6 @@ This IaC production toolkit follows [Gruntwork's official patterns](https://gith
 
 
 ## What's Inside
-
 - Multi-environment IaC support: build EKS cluster across `dev`, `staging`, and `prod`.
 - [CI](.github/workflows/ci.yaml) (on PR): Runs `terragrunt plan` on each environment, uploads output plan to PR, deploys on the staging environment, runs some tests, and destroys.
 - [CD](.github/workflows/cd.yaml) (on push `main`): Automatically deploys on `prod`
@@ -26,7 +25,7 @@ This IaC production toolkit follows [Gruntwork's official patterns](https://gith
 You're new to Terragrunt best practices? Read [Gruntwork's official production patterns](https://github.com/gruntwork-io/terragrunt-infrastructure-catalog-example) to get the foundations required to use this extended repository.
 
 ## Getting Started
-**Protip**: Follow the getting started of the [EKS catalog repository](https://github.com/ConsciousML/terragrunt-template-catalog-eks) first, as you'll need to configure it before using this live repository. 
+Follow the getting started of the [EKS catalog repository](https://github.com/ConsciousML/terragrunt-template-catalog-eks) first, as you'll need to configure it before using this live repository. 
 
 ### Prerequisites
 - AWS account with billing enabled
@@ -103,20 +102,23 @@ Run the following once before using CI/CD:
 - [Setup DNS](live/bootstrap/setup_dns/README.md): creates a [Route53 hosted zone](https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/hosted-zones-working-with.html) per environment to sign TLS certificates with ACM
 - [Tailscale](live/bootstrap/tailscale/README.md): creates [Tailscale](https://tailscale.com/) resources needed for CI and to access internal cluster tools (ArgoCD, etc.)
 
-### Deploy a Dev EKS Cluster
-Deploy the `dev` environment that creates a VPC and deploys an EKS cluster inside it:
+### Deploy a Staging EKS Cluster
+Deploy a stack that creates a VPC and an EKS cluster.
+
+Ensure `TAILSCALE_OAUTH_CLIENT_ID` and `TAILSCALE_OAUTH_CLIENT_SECRET` are set in your `.env` (see the [environment variables guide](https://github.com/ConsciousML/terragrunt-template-catalog-eks/blob/main/docs/environment-variables.md)).
+
 ```bash
 source .env
-cd live/dev
+cd live/staging
 terragrunt stack run init
 terragrunt run --all apply --backend-bootstrap --non-interactive
 ```
 
 Go into the AWS console and check that your resources have been created.
 
-After around 15 min, your `dev` EKS cluster will be created.
+After around 15 min, your `staging` EKS cluster will be created.
 
-To connect `kubectl` to your EKS cluster, create a `kubeconfig` file by running the following and replacing `<region-code>` and `<cluster-name>`:
+Connect `kubectl` to your EKS cluster by creating a `kubeconfig` (replace `<region-code>` and `<cluster-name>`):
 ```bash
 aws eks update-kubeconfig --region <region-code> --name <cluster-name>
 ```
@@ -126,20 +128,40 @@ Next, verify `kubectl` is connected:
 kubectl get pods -n kube-system
 ```
 
-You should see and output similar to:
+You should see an output similar to:
 ```text
 NAME                           READY   STATUS    RESTARTS   AGE
 aws-node-59ld8                 2/2     Running   0          41m
-aws-node-5bvc4                 2/2     Running   0          41m
 coredns-845b86cddf-pg8hk       1/1     Running   0          40m
-coredns-845b86cddf-vngdb       1/1     Running   0          40m
 eks-pod-identity-agent-9pq6k   1/1     Running   0          41m
-eks-pod-identity-agent-fzfk9   1/1     Running   0          41m
-kube-proxy-khhsj               1/1     Running   0          40m
-kube-proxy-pvh7h               1/1     Running   0          40m
+...
 ```
 
-Finally, cleanup by destroying the infrastructure (cwd in `live/dev/`):
+### Log in to ArgoCD
+
+ArgoCD is only reachable with the Tailscale Client running. Make sure you have completed the [Tailscale prerequisites](live/bootstrap/tailscale/README.md#prerequisites) before proceeding.
+
+The ArgoCD host is formed from `live/dns.hcl` as `<subdomain>.staging.<base_domain>` (replace `<subdomain>` and `<base_domain>` with the values from that file, e.g. `argocd.staging.axelmendoza.com`).
+
+**Web UI**: Open `https://<subdomain>.staging.<base_domain>` in your browser and log in with username `admin`. Retrieve the password with:
+```bash
+aws secretsmanager get-secret-value \
+  --secret-id staging-argocd-password \
+  --query SecretString \
+  --output text | jq -r .plaintext
+```
+
+**CLI**: Log in directly in one command:
+```bash
+argocd login <subdomain>.staging.<base_domain> \
+  --username admin \
+  --password $(aws secretsmanager get-secret-value \
+    --secret-id staging-argocd-password \
+    --query SecretString \
+    --output text | jq -r .plaintext)
+```
+
+Finally, cleanup by destroying the infrastructure (cwd in `live/staging/`):
 
 ```bash
 terragrunt run --all destroy --non-interactive

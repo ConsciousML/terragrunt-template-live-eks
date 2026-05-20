@@ -12,7 +12,7 @@ Create an account and login at [https://login.tailscale.com/admin/welcome](https
 
 Download and install the [Tailscale client](https://tailscale.com/download).
 
-Set up `GITHUB_TOKEN`, `TAILSCALE_OAUTH_CLIENT_ID`, and `TAILSCALE_OAUTH_CLIENT_SECRET` following the [environment variables guide](../../../docs/environment-variables.md#tailscale_oauth_client_id-and-tailscale_oauth_client_secret).
+Set up `GITHUB_TOKEN`, `TAILSCALE_OAUTH_CLIENT_ID`, and `TAILSCALE_OAUTH_CLIENT_SECRET` following the [environment variables guide](https://github.com/ConsciousML/terragrunt-template-catalog-eks/blob/main/docs/environment-variables.md).
 
 ## Deploy
 Run once before running Terratest in CI:

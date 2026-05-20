@@ -8,7 +8,7 @@ See the [catalog README](https://github.com/ConsciousML/terragrunt-template-cata
 
 Perform the [quickstart](../../../README.md#getting-started) up to `Authenticate with AWS` (included).
 
-Set up `GITHUB_TOKEN` following the [environment variables guide](../../../docs/environment-variables.md).
+Set up `GITHUB_TOKEN` following the [environment variables guide](https://github.com/ConsciousML/terragrunt-template-catalog-eks/blob/main/docs/environment-variables.md).
 
 ## Deploy
 
