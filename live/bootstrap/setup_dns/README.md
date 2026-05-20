@@ -18,16 +18,16 @@ live/bootstrap/setup_dns/
 
 ## Prerequisites
 
-- Follow the [installation instructions](../../../README.md#installation)
-- Same [prerequisites](../../../README.md#prerequisites) as in the main `README.md`
+Perform the [quickstart](../../../README.md#getting-started) up to `Authenticate with AWS` (included).
 
 ## Deploy
 
 Run once per environment before deploying the EKS stack:
 
 ```bash
+source .env
 cd live/bootstrap/setup_dns/<env>
-terragrunt stack generate
+terragrunt stack run init
 terragrunt run --all apply --backend-bootstrap --non-interactive
 ```
 

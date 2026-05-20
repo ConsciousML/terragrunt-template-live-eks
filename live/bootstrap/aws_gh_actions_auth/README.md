@@ -6,8 +6,7 @@ See the [catalog README](https://github.com/ConsciousML/terragrunt-template-cata
 
 ## Prerequisites
 
-- Follow the [installation instructions](../../../README.md#installation)
-- Same [prerequisites](../../../README.md#prerequisites) as in the main `README.md`
+Perform the [quickstart](../../../README.md#getting-started) up to `Authenticate with AWS` (included).
 
 Set up `GITHUB_TOKEN` following the [environment variables guide](../../../docs/environment-variables.md).
 
@@ -18,6 +17,6 @@ Run once before CI/CD is operational:
 ```bash
 source .env
 cd live/bootstrap/aws_gh_actions_auth
-terragrunt stack generate
+terragrunt stack run init
 terragrunt run --all apply --backend-bootstrap --non-interactive
 ```

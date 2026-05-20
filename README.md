@@ -1,8 +1,8 @@
 # Terragrunt Template Live AWS
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![GitHub Release](https://img.shields.io/github/release/ConsciousML/terragrunt-template-live-aws.svg?style=flat)]()
-[![CI](https://github.com/ConsciousML/terragrunt-template-live-aws/actions/workflows/ci.yaml/badge.svg)](https://github.com/ConsciousML/terragrunt-template-live-aws/actions/workflows/ci.yaml)
+[![GitHub Release](https://img.shields.io/github/release/ConsciousML/terragrunt-template-live-eks.svg?style=flat)]()
+[![CI](https://github.com/ConsciousML/terragrunt-template-live-eks/actions/workflows/ci.yaml/badge.svg)](https://github.com/ConsciousML/terragrunt-template-live-eks/actions/workflows/ci.yaml)
 [![PR's Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat)](http://makeapullrequest.com)
 
 A prod-ready Terragrunt Template for deploying multi-environment [EKS](https://aws.amazon.com/eks/) clusters on AWS
@@ -35,7 +35,7 @@ You're new to Terragrunt best practices? Read [Gruntwork's official production p
 
 ### Fork the Repositories (catalog and live)
 1. Fork the catalog repository by following its [Fork the Repository section](https://github.com/ConsciousML/terragrunt-template-catalog-eks/#fork-the-repository).
-2. Fork this repository (livk) by clicking on `Use this template`
+2. Fork this repository (live) by clicking on `Use this template`
 
 ### Configuration
 1. In `live/github.hcl`, modify:
@@ -47,7 +47,8 @@ locals {
   github_repo_name_live    = "your-live-repo-name"
 }
 ```
-If you've forked both repositories, `github_username_catalog` and `github_username_live` should point to your username (`ConsciousML` for my own forks). 
+If you've forked both repositories, `github_username_catalog` and `github_username_live` should point to your username (`ConsciousML` for my own forks).
+2. Change each `live/*/region.hcl` to match your desired AWS region.
 
 ### Installation
 
@@ -62,6 +63,7 @@ curl https://mise.run | MISE_VERSION=v2026.4.0 sh
 
 Then, install all the tools in the `mise.toml` file:
 ```bash
+mise trust
 mise install
 ```
 
@@ -95,14 +97,19 @@ aws configure
 
 For more information, read the [AWS CLI authentication documentation](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html).
 
-Next, for each directory in `live/` (i.e `bootstrap/`, `dev/`, etc.), change `region.hcl` to match your desired AWS region.
+### Run the Bootstrap Pipelines
+Run the following once before using CI/CD:
+- [AWS GitHub Actions Auth](live/bootstrap/aws_gh_actions_auth/README.md): authenticates GitHub Actions with AWS
+- [Setup DNS](live/bootstrap/setup_dns/README.md): creates a [Route53 hosted zone](https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/hosted-zones-working-with.html) per environment to sign TLS certificates with ACM
+- [Tailscale](live/bootstrap/tailscale/README.md): creates [Tailscale](https://tailscale.com/) resources needed for CI and to access internal cluster tools (ArgoCD, etc.)
 
 ### Deploy a Dev EKS Cluster
 Deploy the `dev` environment that creates a VPC and deploys an EKS cluster inside it:
 ```bash
+source .env
 cd live/dev
-terragrunt stack generate
-terragrunt stack run apply --backend-bootstrap --non-interactive
+terragrunt stack run init
+terragrunt run --all apply --backend-bootstrap --non-interactive
 ```
 
 Go into the AWS console and check that your resources have been created.
@@ -135,8 +142,7 @@ kube-proxy-pvh7h               1/1     Running   0          40m
 Finally, cleanup by destroying the infrastructure (cwd in `live/dev/`):
 
 ```bash
-terragrunt stack generate
-terragrunt stack run destroy --non-interactive
+terragrunt run --all destroy --non-interactive
 ```
 
 ## Deployment Workflow
