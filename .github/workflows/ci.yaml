@@ -148,6 +148,18 @@ jobs:
           PR_NUMBER: ${{ github.event.pull_request.number }}
           GH_TOKEN: ${{ github.token }}
 
+      - name: Comment on PR if both labels are present
+        if: steps.check-pr-labels.outputs.run_present == 'true' && steps.check-pr-labels.outputs.skip_present == 'true'
+        uses: thollander/actions-comment-pull-request@v3
+        with:
+          message: |
+            :x: Both `run-terratest` and `skip-terratest` labels are present on this PR.
+            Please remove one before CI can proceed.
+
+      - name: Fail if both labels are present
+        if: steps.check-pr-labels.outputs.run_present == 'true' && steps.check-pr-labels.outputs.skip_present == 'true'
+        run: exit 1
+
       - name: Comment on PR if 'skip-terratest' label is present
         if: steps.check-pr-labels.outputs.skip_present == 'true'
         uses: thollander/actions-comment-pull-request@v3
