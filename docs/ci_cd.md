@@ -48,16 +48,12 @@ Runs automatically when a PR is **merged to `main`** and deploys changes to the 
 
 **Important**: CD automatically applies to production. Always review the production plan from CI before merging. If you want to skip the deployment, add the `skip-cd` tag before merging the PR.
 
-## Setup
+## Prerequisites
+Perform the [quickstart](../../../README.md#getting-started) up to `Authenticate with AWS` (included).
 
-### Initial Setup
-Follow the [bootstrap guide](https://github.com/ConsciousML/terragrunt-template-catalog-eks/tree/main/bootstrap/enable_tg_github_actions) once to:
-- Configure GitHub Actions authentication with AWS
-- Create a IAM Role with the required policies
-- Set up deploy keys for private repository access
-- Add GitHub secrets to be retrieved by GitHub Actions workflows.
+Then, run the [bootstrap pipelines](../README.md#run-the-bootstrap-pipelines) once per repository.
 
-## Using the CI/CD
+## Using the CI/CD (Development Workflow)
 1. Create a branch with your infrastructure changes:
    ```bash
    git checkout -b feature/update-instance-size
