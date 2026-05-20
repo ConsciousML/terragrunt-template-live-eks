@@ -22,14 +22,15 @@ Perform the [quickstart](../../../README.md#getting-started) up to `Authenticate
 
 ## Deploy
 
-Run once per environment before deploying the EKS stack:
+Repeat the following for each environment (replacing `<environment>` by `staging` and then by `prod`):
 
 ```bash
 source .env
-cd live/bootstrap/setup_dns/<env>
+cd pipelines/bootstrap/setup_dns/<environment>/stack
 terragrunt stack run init
 terragrunt run --all apply --backend-bootstrap --non-interactive
 ```
+
 
 Retrieve the 4 nameservers from the output:
 
@@ -39,16 +40,18 @@ terragrunt stack output --json setup_dns.route53_hosted_zone.name_servers
 
 ### Delegate the subdomain
 
-In your domain registrar, add 4 NS records for `{subdomain}.{environment}` using the nameservers above:
+Repeat the following for each environment.
+
+In your domain registrar, add 4 NS records for the subdomain using the nameservers from the output above.
 
 | Type | Host | Value |
 |------|------|-------|
-| NS | `argocd.staging` | `ns-123.awsdns-12.com` |
-| NS | `argocd.staging` | `ns-456.awsdns-34.net` |
-| NS | `argocd.staging` | `ns-789.awsdns-56.org` |
-| NS | `argocd.staging` | `ns-012.awsdns-78.co.uk` |
+| NS | `<subdomain>.<environment>` | `ns-123.awsdns-12.com` |
+| NS | `<subdomain>.<environment>` | `ns-456.awsdns-34.net` |
+| NS | `<subdomain>.<environment>` | `ns-789.awsdns-56.org` |
+| NS | `<subdomain>.<environment>` | `ns-012.awsdns-78.co.uk` |
 
-Replace `argocd.staging` with your actual `{subdomain}.{environment}` and each value with the nameservers from the output.
+Replace `<subdomain>.<environment>` with your actual subdomain and environment (`argocd.stagimg` for example).
 
 ### Verify propagation
 

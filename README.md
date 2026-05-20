@@ -28,7 +28,7 @@ Follow the getting started of the [EKS catalog repository](https://github.com/Co
 ### Prerequisites
 - AWS account with billing enabled
 - GitHub account
-- AWS IAM permissions to manage IAM roles, VPC resources, EKS resources, compute resources and S3 (see `policy_arns` in the [bootstrap stack](live/bootstrap/enable_tg_github_actions/terragrunt.stack.hcl) for a list of the specific IAM policies)
+- `AdministratorAccess` AWS IAM Policy
 
 ### Fork the Repository
 Fork this repository by clicking on `Use this template`.
@@ -161,6 +161,9 @@ Finally, cleanup by destroying the infrastructure (cwd in `live/staging/`):
 ```bash
 terragrunt run --all destroy --non-interactive
 ```
+
+## Extend this Repository
+Follow the [development workflow guide](docs/ci_cd.md#using-the-cicd-development-workflow).
 
 ## CI/CD Pipelines
 
