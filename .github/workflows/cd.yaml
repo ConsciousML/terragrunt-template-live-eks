@@ -17,7 +17,7 @@ permissions:
 
 jobs:
   check-skip-cd:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       should_skip: ${{ steps.check-label.outputs.skip_cd }}
     steps:
@@ -64,27 +64,79 @@ jobs:
           GH_TOKEN: ${{ github.token }}
 
   terragrunt-apply-prod:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: check-skip-cd
     if: needs.check-skip-cd.outputs.should_skip != 'true'
+    outputs:
+      client_id: ${{ steps.ts-oauth-create.outputs.client_id }}
+
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4 
+        uses: actions/checkout@v4
 
       # Installs all required tools (`mise.toml`)
       # Authenticates with AWS
       # Sets up deploy keys to pull external repositories when running Terragrunt
+      # Connects to Tailscale — required by the Tailscale provider during apply
       - uses: ./.github/actions/setup
         with:
           deploy-keys: |
             ${{ secrets.DEPLOY_KEY_TG_LIVE }}
             ${{ secrets.DEPLOY_KEY_TG_CATALOG }}
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          aws-region: ${{ secrets.AWS_REGION }}   
+          aws-region: ${{ secrets.AWS_REGION }}
+          ts-oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          ts-audience: ${{ secrets.TS_AUDIENCE }}
+          ts-tags: ${{ secrets.TS_TAGS }}
 
+      - name: Request Tailscale API token using WIF credentials
+        id: ts-token-exchange
+        uses: ./.github/actions/tailscale-token-exchange
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          audience: ${{ secrets.TS_AUDIENCE }}
+
+      - name: Create temporary Tailscale OAuth client
+        id: ts-oauth-create
+        uses: ./.github/actions/tailscale-oauth-create
+        with:
+          ts-token: ${{ steps.ts-token-exchange.outputs.ts_token }}
+          ts-tags: ${{ secrets.TS_TAGS }}
+          description: cd-apply-prod-${{ github.run_id }}
+
+      # Use newly created OAuth client instead of WIF credentials
+      # WIF token expires after 10 min and apply can take longer
+      # OAuth is a long lived credential but we delete it just after apply
       - name: Terragrunt apply on prod
+        env:
+          TAILSCALE_IDENTITY_TOKEN: ""
+          TAILSCALE_OAUTH_CLIENT_ID: ${{ steps.ts-oauth-create.outputs.client_id }}
+          TAILSCALE_OAUTH_CLIENT_SECRET: ${{ steps.ts-oauth-create.outputs.client_secret }}
         run: |
           cd live/prod
-          terragrunt stack generate
-          terragrunt run --all init --no-stack-generate --backend-bootstrap --non-interactive
-          terragrunt run --all apply --no-stack-generate --non-interactive
+          terragrunt stack run init
+          terragrunt run --all apply --backend-bootstrap --non-interactive
+
+  revoke-oauth:
+    # Revokes the temporary Tailscale OAuth client created during apply.
+    # Runs even when apply fails to ensure no credentials are left behind.
+    needs: [check-skip-cd, terragrunt-apply-prod]
+    if: always() && needs.check-skip-cd.outputs.should_skip != 'true' && needs.terragrunt-apply-prod.outputs.client_id != ''
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Request Tailscale API token using WIF credentials
+        id: ts-token-exchange
+        uses: ./.github/actions/tailscale-token-exchange
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          audience: ${{ secrets.TS_AUDIENCE }}
+
+      - name: Revoke temporary Tailscale OAuth client
+        uses: ./.github/actions/tailscale-oauth-revoke
+        with:
+          ts-token: ${{ steps.ts-token-exchange.outputs.ts_token }}
+          client-id: ${{ needs.terragrunt-apply-prod.outputs.client_id }}

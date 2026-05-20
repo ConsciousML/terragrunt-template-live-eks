@@ -16,9 +16,9 @@ Perform the [quickstart](../../../README.md#getting-started) up to `Authenticate
 Setup the go module (the module is already initialized — run these if you are adding new dependencies):
 ```bash
 go get github.com/gruntwork-io/terratest@v1.0.0
-go get github.com/aws/aws-sdk-go-v2/aws
-go get github.com/aws/aws-sdk-go-v2/config
-go get github.com/aws/aws-sdk-go-v2/service/secretsmanager
+go get github.com/aws/aws-sdk-go-v2@v1.41.7
+go get github.com/aws/aws-sdk-go-v2/config@v1.32.17
+go get github.com/aws/aws-sdk-go-v2/service/secretsmanager@v1.41.7
 go mod tidy
 ```
 

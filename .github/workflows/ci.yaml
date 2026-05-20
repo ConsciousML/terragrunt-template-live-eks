@@ -25,7 +25,7 @@ env:
 
 jobs:
   check-if-pr-is-draft:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Fail if PR is in draft mode
         if: github.event.pull_request.draft == true
@@ -34,7 +34,7 @@ jobs:
           exit 1
 
   code-quality-checks:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: check-if-pr-is-draft
     steps:
       - name: Checkout code
@@ -60,7 +60,7 @@ jobs:
         uses: pre-commit/action@v3.0.1
 
   terragrunt-validate-plan:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: code-quality-checks
     strategy:
       matrix:
@@ -121,7 +121,7 @@ jobs:
   check-pr-labels:
     # Gates the terratest run: ensures exactly one of 'run-terratest' or 'skip-terratest' is present on the PR
     needs: terragrunt-validate-plan
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       should_run: ${{ steps.set-output.outputs.should_run }}
 
@@ -147,6 +147,18 @@ jobs:
         env:
           PR_NUMBER: ${{ github.event.pull_request.number }}
           GH_TOKEN: ${{ github.token }}
+
+      - name: Comment on PR if both labels are present
+        if: steps.check-pr-labels.outputs.run_present == 'true' && steps.check-pr-labels.outputs.skip_present == 'true'
+        uses: thollander/actions-comment-pull-request@v3
+        with:
+          message: |
+            :x: Both `run-terratest` and `skip-terratest` labels are present on this PR.
+            Please remove one before CI can proceed.
+
+      - name: Fail if both labels are present
+        if: steps.check-pr-labels.outputs.run_present == 'true' && steps.check-pr-labels.outputs.skip_present == 'true'
+        run: exit 1
 
       - name: Comment on PR if 'skip-terratest' label is present
         if: steps.check-pr-labels.outputs.skip_present == 'true'
@@ -183,7 +195,7 @@ jobs:
     # Performs some tests and then destroys the infra.
     needs: check-pr-labels
     if: needs.check-pr-labels.outputs.should_run == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       client_id: ${{ steps.ts-oauth-create.outputs.client_id }}
 
@@ -215,34 +227,11 @@ jobs:
 
       - name: Create temporary Tailscale OAuth client
         id: ts-oauth-create
-        env:
-          TS_TOKEN: ${{ steps.ts-token-exchange.outputs.ts_token }}
-          TS_TAGS: ${{ secrets.TS_TAGS }}
-        run: |
-          response=$(curl -sS 'https://api.tailscale.com/api/v2/tailnet/-/keys' \
-            --request POST \
-            --header 'Content-Type: application/json' \
-            --header "Authorization: Bearer $TS_TOKEN" \
-            --data "{
-              \"keyType\": \"client\",
-              \"description\": \"terratest-ci-${{ github.run_id }}\",
-              \"tags\": [
-                \"$TS_TAGS\"
-              ],
-              \"scopes\": [\"all\"]
-            }")
-
-          client_id=$(echo "$response" | jq -r '.id')
-          client_secret=$(echo "$response" | jq -r '.key')
-
-          if [ -z "$client_id" ] || [ "$client_id" = "null" ]; then
-            echo "ERROR: OAuth client creation failed"
-            exit 1
-          fi
-
-          echo "::add-mask::$client_secret"
-          echo "client_id=$client_id" >> $GITHUB_OUTPUT
-          echo "client_secret=$client_secret" >> $GITHUB_OUTPUT
+        uses: ./.github/actions/tailscale-oauth-create
+        with:
+          ts-token: ${{ steps.ts-token-exchange.outputs.ts_token }}
+          ts-tags: ${{ secrets.TS_TAGS }}
+          description: terratest-ci-${{ github.run_id }}
 
       # Use newly created OAuth client instead of WIF credentials
       # WIF token expires after 10 min and terratest takes 30m+
@@ -259,7 +248,7 @@ jobs:
     # Runs even when terratest fails to ensure no credentials are left behind.
     needs: [check-pr-labels, terratest]
     if: always() && needs.check-pr-labels.outputs.should_run == 'true' && needs.terratest.outputs.client_id != ''
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
       - name: Checkout code
@@ -273,21 +262,13 @@ jobs:
           audience: ${{ secrets.TS_AUDIENCE }}
 
       - name: Revoke temporary Tailscale OAuth client
-        env:
-          TS_TOKEN: ${{ steps.ts-token-exchange.outputs.ts_token }}
-          CLIENT_ID: ${{ needs.terratest.outputs.client_id }}
-        run: |
-          response=$(curl -sS "https://api.tailscale.com/api/v2/tailnet/-/keys/$CLIENT_ID" \
-            --request DELETE \
-            --header "Authorization: Bearer $TS_TOKEN")
-
-          if [ "$response" != "null" ]; then
-            echo "ERROR: OAuth client revokation failed"
-            exit 1
-          fi
+        uses: ./.github/actions/tailscale-oauth-revoke
+        with:
+          ts-token: ${{ steps.ts-token-exchange.outputs.ts_token }}
+          client-id: ${{ needs.terratest.outputs.client_id }}
 
   comment-tg-plan-on-pr:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: [terragrunt-validate-plan, revoke-oauth]
     if: always() && needs.terragrunt-validate-plan.result == 'success'
 

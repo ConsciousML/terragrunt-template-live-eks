@@ -1,0 +1,57 @@
+name: 'Create temporary Tailscale OAuth client'
+description: 'Creates a short-lived Tailscale OAuth client using a Tailscale API token'
+
+inputs:
+  ts-token:
+    description: 'Short-lived Tailscale API token (from tailscale-token-exchange)'
+    required: true
+  ts-tags:
+    description: 'Tailscale tags to assign to the OAuth client'
+    required: true
+  description:
+    description: 'Human-readable label for the OAuth client (e.g. terratest-ci-<run_id>)'
+    required: true
+
+outputs:
+  client_id:
+    description: 'OAuth client ID'
+    value: ${{ steps.create.outputs.client_id }}
+  client_secret:
+    description: 'OAuth client secret'
+    value: ${{ steps.create.outputs.client_secret }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Create OAuth client
+      id: create
+      shell: bash
+      env:
+        TS_TOKEN: ${{ inputs.ts-token }}
+        TS_TAGS: ${{ inputs.ts-tags }}
+        DESCRIPTION: ${{ inputs.description }}
+      run: |
+        response=$(curl -sS 'https://api.tailscale.com/api/v2/tailnet/-/keys' \
+          --request POST \
+          --header 'Content-Type: application/json' \
+          --header "Authorization: Bearer $TS_TOKEN" \
+          --data "{
+            \"keyType\": \"client\",
+            \"description\": \"$DESCRIPTION\",
+            \"tags\": [
+              \"$TS_TAGS\"
+            ],
+            \"scopes\": [\"all\"]
+          }")
+
+        client_id=$(echo "$response" | jq -r '.id')
+        client_secret=$(echo "$response" | jq -r '.key')
+
+        if [ -z "$client_id" ] || [ "$client_id" = "null" ]; then
+          echo "ERROR: OAuth client creation failed"
+          exit 1
+        fi
+
+        echo "::add-mask::$client_secret"
+        echo "client_id=$client_id" >> $GITHUB_OUTPUT
+        echo "client_secret=$client_secret" >> $GITHUB_OUTPUT
