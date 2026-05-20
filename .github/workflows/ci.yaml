@@ -227,34 +227,11 @@ jobs:
 
       - name: Create temporary Tailscale OAuth client
         id: ts-oauth-create
-        env:
-          TS_TOKEN: ${{ steps.ts-token-exchange.outputs.ts_token }}
-          TS_TAGS: ${{ secrets.TS_TAGS }}
-        run: |
-          response=$(curl -sS 'https://api.tailscale.com/api/v2/tailnet/-/keys' \
-            --request POST \
-            --header 'Content-Type: application/json' \
-            --header "Authorization: Bearer $TS_TOKEN" \
-            --data "{
-              \"keyType\": \"client\",
-              \"description\": \"terratest-ci-${{ github.run_id }}\",
-              \"tags\": [
-                \"$TS_TAGS\"
-              ],
-              \"scopes\": [\"all\"]
-            }")
-
-          client_id=$(echo "$response" | jq -r '.id')
-          client_secret=$(echo "$response" | jq -r '.key')
-
-          if [ -z "$client_id" ] || [ "$client_id" = "null" ]; then
-            echo "ERROR: OAuth client creation failed"
-            exit 1
-          fi
-
-          echo "::add-mask::$client_secret"
-          echo "client_id=$client_id" >> $GITHUB_OUTPUT
-          echo "client_secret=$client_secret" >> $GITHUB_OUTPUT
+        uses: ./.github/actions/tailscale-oauth-create
+        with:
+          ts-token: ${{ steps.ts-token-exchange.outputs.ts_token }}
+          ts-tags: ${{ secrets.TS_TAGS }}
+          description: terratest-ci-${{ github.run_id }}
 
       # Use newly created OAuth client instead of WIF credentials
       # WIF token expires after 10 min and terratest takes 30m+
@@ -285,18 +262,10 @@ jobs:
           audience: ${{ secrets.TS_AUDIENCE }}
 
       - name: Revoke temporary Tailscale OAuth client
-        env:
-          TS_TOKEN: ${{ steps.ts-token-exchange.outputs.ts_token }}
-          CLIENT_ID: ${{ needs.terratest.outputs.client_id }}
-        run: |
-          response=$(curl -sS "https://api.tailscale.com/api/v2/tailnet/-/keys/$CLIENT_ID" \
-            --request DELETE \
-            --header "Authorization: Bearer $TS_TOKEN")
-
-          if [ "$response" != "null" ]; then
-            echo "ERROR: OAuth client revokation failed"
-            exit 1
-          fi
+        uses: ./.github/actions/tailscale-oauth-revoke
+        with:
+          ts-token: ${{ steps.ts-token-exchange.outputs.ts_token }}
+          client-id: ${{ needs.terratest.outputs.client_id }}
 
   comment-tg-plan-on-pr:
     runs-on: ubuntu-24.04

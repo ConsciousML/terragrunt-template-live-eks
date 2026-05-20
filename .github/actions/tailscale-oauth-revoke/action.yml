@@ -1,0 +1,28 @@
+name: 'Revoke temporary Tailscale OAuth client'
+description: 'Revokes a Tailscale OAuth client by ID using a Tailscale API token'
+
+inputs:
+  ts-token:
+    description: 'Short-lived Tailscale API token (from tailscale-token-exchange)'
+    required: true
+  client-id:
+    description: 'OAuth client ID to revoke'
+    required: true
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Revoke OAuth client
+      shell: bash
+      env:
+        TS_TOKEN: ${{ inputs.ts-token }}
+        CLIENT_ID: ${{ inputs.client-id }}
+      run: |
+        response=$(curl -sS "https://api.tailscale.com/api/v2/tailnet/-/keys/$CLIENT_ID" \
+          --request DELETE \
+          --header "Authorization: Bearer $TS_TOKEN")
+
+        if [ "$response" != "null" ]; then
+          echo "ERROR: OAuth client revokation failed"
+          exit 1
+        fi
