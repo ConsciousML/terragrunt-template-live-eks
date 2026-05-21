@@ -195,6 +195,10 @@ Run hooks on demande:
 prek run
 ```
 
+## Create a New Environment
+
+See the [new environment guide](docs/new-environment.md) for the full sequence of steps.
+
 ## License
 
 This project is licensed under the Apache License 2.0. See the [LICENSE](LICENSE) file for details.
