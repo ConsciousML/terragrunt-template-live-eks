@@ -87,7 +87,36 @@ jobs:
       - name: Install aha to convert plan output to html
         run: sudo apt-get install aha
 
+      - name: Request Tailscale API token using WIF credentials
+        id: ts-token-exchange
+        uses: ./.github/actions/tailscale-token-exchange
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          audience: ${{ secrets.TS_AUDIENCE }}
+
+      - name: Create temporary Tailscale OAuth client
+        id: ts-oauth-create
+        uses: ./.github/actions/tailscale-oauth-create
+        with:
+          ts-token: ${{ steps.ts-token-exchange.outputs.ts_token }}
+          ts-tags: ${{ secrets.TS_TAGS }}
+          description: plan-${{ matrix.env }}-ci-${{ github.run_id }}
+
+      - name: Save OAuth client ID for revoke
+        run: echo "${{ steps.ts-oauth-create.outputs.client_id }}" > client_id.txt
+
+      - name: Upload OAuth client ID
+        uses: actions/upload-artifact@v4
+        with:
+          name: ts-client-id-${{ matrix.env }}
+          path: client_id.txt
+          retention-days: 1
+
       - name: Terragrunt stack generate, validate, and plan on ${{ matrix.env }}
+        env:
+          TAILSCALE_IDENTITY_TOKEN: ""
+          TAILSCALE_OAUTH_CLIENT_ID: ${{ steps.ts-oauth-create.outputs.client_id }}
+          TAILSCALE_OAUTH_CLIENT_SECRET: ${{ steps.ts-oauth-create.outputs.client_secret }}
         run: |
           cd live/${{ matrix.env }}
           terragrunt stack generate
@@ -264,9 +293,50 @@ jobs:
           ts-token: ${{ steps.ts-token-exchange.outputs.ts_token }}
           client-id: ${{ needs.terratest.outputs.client_id }}
 
+  revoke-plan-oauth:
+    needs: terragrunt-validate-plan
+    if: always()
+    runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        env:
+          - staging
+          - prod
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download OAuth client ID
+        id: download-client-id
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: ts-client-id-${{ matrix.env }}
+
+      - name: Read client ID
+        id: read-client-id
+        if: steps.download-client-id.outcome == 'success'
+        run: echo "client_id=$(cat client_id.txt)" >> $GITHUB_OUTPUT
+
+      - name: Request Tailscale API token using WIF credentials
+        id: ts-token-exchange
+        if: steps.download-client-id.outcome == 'success'
+        uses: ./.github/actions/tailscale-token-exchange
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          audience: ${{ secrets.TS_AUDIENCE }}
+
+      - name: Revoke temporary Tailscale OAuth client
+        if: steps.download-client-id.outcome == 'success'
+        uses: ./.github/actions/tailscale-oauth-revoke
+        with:
+          ts-token: ${{ steps.ts-token-exchange.outputs.ts_token }}
+          client-id: ${{ steps.read-client-id.outputs.client_id }}
+
   comment-tg-plan-on-pr:
     runs-on: ubuntu-24.04
-    needs: [terragrunt-validate-plan, revoke-oauth]
+    needs: [terragrunt-validate-plan, revoke-plan-oauth, revoke-oauth]
     if: always() && needs.terragrunt-validate-plan.result == 'success'
 
     steps:
