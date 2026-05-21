@@ -56,3 +56,41 @@ Or to flush the DNS cache:
 ```bash
 sudo dscacheutil -flushcache && sudo killall -HUP mDNSResponder
 ```
+
+## Can't Destroy `prod` Cluster
+If the production cluster is created by [CD](../.github/workflows/cd.yaml), our local IAM user is not added by default as a cluster administrator.
+
+A temporary workaround is to assume the CI/CD role to be able to destroy the cluster.
+
+We first modify the role to add our IAM user as a principal:
+```bash
+export AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+
+aws iam update-assume-role-policy \
+    --role-name gh-tg-live-eks-role \
+    --policy-document "$(aws iam get-role --role-name gh-tg-live-eks-role \
+      --query 'Role.AssumeRolePolicyDocument' --output json \
+      | jq '.Statement += [{
+          "Effect": "Allow",
+          "Principal": {"AWS": "arn:aws:iam::${AWS_ACCOUNT_ID}:user/terragrunt"},
+          "Action": "sts:AssumeRole"
+        }]')"
+```
+
+Then, we are able to assume the role:
+```bash
+eval $(aws sts assume-role \
+    --role-arn arn:aws:iam::${AWS_ACCOUNT_ID}:role/gh-tg-live-eks-role \
+    --role-session-name local-destroy \
+    --output json \
+    | jq -r '.Credentials |
+        "export AWS_ACCESS_KEY_ID=\(.AccessKeyId)\nexport AWS_SECRET_ACCESS_KEY=\(.SecretAccessKey)\nexport
+  AWS_SESSION_TOKEN=\(.SessionToken)"')
+```
+
+Finally, we can destroy the `prod` infrastructure:
+```bash
+source .env
+cd live/prod
+terragrunt stack run destroy
+```
