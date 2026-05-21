@@ -182,6 +182,19 @@ See the [CI/CD workflow guide](docs/ci_cd.md) for detailed setup instructions an
 
 See the [Terratest guide](tests/README.md) for running and writing infrastructure tests.
 
+### Pre-commit Setup (recommended)
+We use a more efficient framework than [pre-commit](https://github.com/pre-commit/pre-commit) called [prek](https://github.com/j178/prek).
+
+Wire hooks automatically into git automatically:
+```bash
+prek install
+```
+
+Run hooks on demande:
+```bash
+prek run
+```
+
 ## License
 
 This project is licensed under the Apache License 2.0. See the [LICENSE](LICENSE) file for details.
