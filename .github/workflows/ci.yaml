@@ -51,13 +51,10 @@ jobs:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Install pre-commit
-        run: pip install pre-commit
-
-      # Runs the checks as in pre-commits (terragrunt-hcl-fmt)
+      # Runs the checks as in pre-commits (terragrunt-hcl-fmt) using prek
       # This prevents any discrepancies between the pre-commit checks and the CI checks
-      - name: Run pre-commit hooks
-        uses: pre-commit/action@v3.0.1
+      - name: Run pre-commit hooks (prek)
+        uses: j178/prek-action@v2.0.4
 
   terragrunt-validate-plan:
     runs-on: ubuntu-24.04
