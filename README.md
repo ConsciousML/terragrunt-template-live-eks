@@ -31,19 +31,23 @@ Follow the getting started of the [EKS catalog repository](https://github.com/Co
 - `AdministratorAccess` AWS IAM Policy
 
 ### Fork the Repository
-Fork this repository by clicking on `Use this template`.
+1. Click on the `Use this template` > `Create a new repository` button.
+2. Under `Repository Name`, choose a name for your repository.
 
 ### Configuration
-1. In `live/github.hcl`, modify:
+1. In `live/github.hcl`, modify (by replacing `<YourGitHubUsername*>`, `<your-catalog-repo-name>`, and `<your-live-repo-name>`):
 ```hcl
 locals {
-  github_username_catalog  = "YourUsernameWhereYourCatalogForkIs"
-  github_username_live     = "YourUsernameWhereYourLiveForkIs"
-  github_repo_name_catalog = "your-catalog-repo-name"
-  github_repo_name_live    = "your-live-repo-name"
+  github_username_catalog  = "<YourUsernameWhereYourCatalogForkIs>"
+  github_username_live     = "<YourUsernameWhereYourLiveForkIs>"
+  github_repo_name_catalog = "<your-catalog-repo-name>"
+  github_repo_name_live    = "<your-live-repo-name>"
 }
 ```
 If you've forked both repositories, `github_username_catalog` and `github_username_live` should point to your username (`ConsciousML` for my own forks).
+
+`<your-live-repo-name>` should be the same name you chose in the previous section and `<your-catalog-repo-name>` should be the name you chose in the `### Fork the Repository` section of the [catalog repository](https://github.com/ConsciousML/terragrunt-template-catalog-eks/blob/main/README.md#fork-the-repository). 
+
 2. Change each `live/*/region.hcl` to match your desired AWS region.
 
 ### Installation
@@ -194,6 +198,10 @@ Run hooks on demande:
 ```bash
 prek run
 ```
+
+## Create a New Environment
+
+See the [new environment guide](docs/new-environment.md) for the full sequence of steps.
 
 ## License
 

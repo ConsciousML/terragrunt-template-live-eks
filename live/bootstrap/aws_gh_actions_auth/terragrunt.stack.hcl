@@ -1,5 +1,5 @@
 locals {
-  version = "v0.0.5"
+  version = "v0.0.7"
 
   github_locals            = read_terragrunt_config(find_in_parent_folders("github.hcl")).locals
   github_username_catalog  = local.github_locals.github_username_catalog
@@ -94,5 +94,21 @@ stack "aws_gh_actions_auth" {
       "DEPLOY_KEY_TG_CATALOG",
     ]
     deploy_key_title = "Terragrunt Live EKS Deploy Key"
+  }
+}
+
+unit "aws_caller_identity" {
+  source = "git::git@github.com:${local.github_username_catalog}/${local.github_repo_name_catalog}.git//units/aws_caller_identity/?ref=${local.version}"
+  path   = "aws_caller_identity"
+  values = { version = local.version }
+}
+
+unit "secret_eks_local_admin" {
+  source = "git::git@github.com:${local.github_username_catalog}/${local.github_repo_name_catalog}.git//units/github/secrets/eks_local_admin/?ref=${local.version}"
+  path   = "secret_eks_local_admin"
+  values = {
+    version          = local.version
+    github_token     = local.github_token
+    github_repo_name = local.github_repo_name_live
   }
 }

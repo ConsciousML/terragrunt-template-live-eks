@@ -1,5 +1,5 @@
 locals {
-  version_catalog            = "v0.0.5"
+  version_catalog            = "v0.0.6"
   version_vpc                = "6.6.0"
   version_cluster            = "21.15.1"
   version_aws_lbc            = "3.2.1"
@@ -18,6 +18,10 @@ locals {
 
   private_subnets = [cidrsubnet(local.vpc_cidr, 8, 1), cidrsubnet(local.vpc_cidr, 8, 2)]
   public_subnets  = [cidrsubnet(local.vpc_cidr, 8, 3), cidrsubnet(local.vpc_cidr, 8, 4)]
+
+  # IAM principal that needs local destroy access when CI deployed the cluster.
+  # Get your ARN: aws sts get-caller-identity --query Arn --output text
+  local_admin_arn = get_env("EKS_LOCAL_ADMIN_ARN", "")
 }
 
 unit "route53_hosted_zone_public" {
@@ -104,6 +108,20 @@ unit "cluster" {
     compute_config = {
       enabled = false
     }
+
+    access_entries = local.local_admin_arn != "" ? {
+      local_admin = {
+        principal_arn = local.local_admin_arn
+        policy_associations = {
+          admin = {
+            policy_arn = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
+            access_scope = {
+              type = "cluster"
+            }
+          }
+        }
+      }
+    } : {}
   }
 }
 

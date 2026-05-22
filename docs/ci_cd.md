@@ -4,7 +4,69 @@
 
 The [CI](../.github/workflows/ci.yaml) and [CD](../.github/workflows/cd.yaml) workflows automate infrastructure validation, testing, and deployment on every pull request and merge.
 
-## How It Works
+## Features
+
+- Validates HCL formatting on every PR
+- Plans staging and prod in parallel
+- Gates on a required `run-terratest` or `skip-terratest` label before proceeding
+- Runs Terratest infrastructure tests on staging and cleans up automatically
+- Comments the production plan artifact on the PR
+- Auto-deploys to production on merge to `main`
+
+For details on each step, see [How CI/CD Works](#how-cicd-works).
+
+## Prerequisites
+Perform the [quickstart](../../../README.md#getting-started) up to `Authenticate with AWS` (included).
+
+Then, run the [bootstrap pipelines](../README.md#run-the-bootstrap-pipelines) once per repository.
+
+## Using the CI/CD (Development Workflow)
+
+> **Caution**: If you will need to run `terragrunt destroy` or any K8s operation locally against `prod` after CD deploys, configure your IAM access entry **before** opening the PR, see [Local Access After CD Deployment](#local-access-after-cd-deployment).
+
+1. Create a branch with your infrastructure changes:
+   ```bash
+   git checkout -b feature/update-instance-size
+   ```
+
+2. Make changes into the Terraform code, units, and stacks in the catalog repository by following its [development workflow](https://github.com/ConsciousML/terragrunt-template-catalog-eks/blob/main/docs/development.md).
+
+3. Next, update a stack configuration or add a new stack. For example:
+```hcl
+# live/dev/vpc_gce/terragrunt.stack.hcl
+locals {
+  version = "v0.0.3" # Change version, make sure to release on the catalog before
+}
+
+stack "vpc_ec2" {
+  source = "github.com/ConsciousML/terragrunt-template-catalog-eks//stacks/vpc_ec2?ref=${local.version}"
+  path   = "infrastructure"
+
+  values = {
+    ec2_instance_type  = "t3.micro" 
+    # all other parameters ...
+  }
+}
+```
+
+4. Push your code.
+
+5. Open a pull request. The CI pipeline runs automatically.
+
+6. Review the CI results:
+   - Check that all validation passes. If not, implement a fix, and go back to 4.
+   - Download and review the **production plan artifact** (linked in PR comment)
+   - The plan shows exactly what will be created, modified, or destroyed
+
+7. Add a label — **required before CI can complete**:
+   - `run-terratest`: deploys real infrastructure to staging, validates end-to-end, and cleans up automatically — use this before merging significant changes
+   - `skip-terratest`: skips the staging deployment
+
+8. Review and merge.
+
+9. CD automatically deploys to production after merge completes.
+
+## How CI/CD Works
 
 ### Continuous Integration (CI)
 
@@ -48,50 +110,8 @@ Runs automatically when a PR is **merged to `main`** and deploys changes to the 
 
 **Important**: CD automatically applies to production. Always review the production plan from CI before merging. If you want to skip the deployment, add the `skip-cd` tag before merging the PR.
 
-## Prerequisites
-Perform the [quickstart](../../../README.md#getting-started) up to `Authenticate with AWS` (included).
+## Local Access After CD Deployment
 
-Then, run the [bootstrap pipelines](../README.md#run-the-bootstrap-pipelines) once per repository.
+The bootstrap automatically registers the IAM identity used to run it as a cluster admin. It stores that ARN as the `EKS_LOCAL_ADMIN_ARN` GitHub Actions secret, and CD injects it on every apply so the access entry is always in sync.
 
-## Using the CI/CD (Development Workflow)
-1. Create a branch with your infrastructure changes:
-   ```bash
-   git checkout -b feature/update-instance-size
-   ```
-
-2. Make changes into the Terraform code, units, and stacks in the catalog repository by following its [development workflow](https://github.com/ConsciousML/terragrunt-template-catalog-eks/blob/main/docs/development.md).
-
-3. Next, update a stack configuration or add a new stack. For example:
-```hcl
-# live/dev/vpc_gce/terragrunt.stack.hcl
-locals {
-  version = "v0.0.3" # Change version, make sure to release on the catalog before
-}
-
-stack "vpc_ec2" {
-  source = "github.com/ConsciousML/terragrunt-template-catalog-eks//stacks/vpc_ec2?ref=${local.version}"
-  path   = "infrastructure"
-
-  values = {
-    ec2_instance_type  = "t3.micro" 
-    # all other parameters ...
-  }
-}
-```
-
-3. Push your code.
-
-4. Open a pull request. The CI pipeline runs automatically.
-
-5. Review the CI results:
-   - Check that all validation passes. If not, implement a fix, and go back to 3.
-   - Download and review the **production plan artifact** (linked in PR comment)
-   - The plan shows exactly what will be created, modified, or destroyed
-
-6. Add a label — **required before CI can complete**:
-   - `run-terratest`: deploys real infrastructure to staging, validates end-to-end, and cleans up automatically — use this before merging significant changes
-   - `skip-terratest`: skips the staging deployment
-
-7. Review and merge.
-
-8. CD automatically deploys to production after merge completes.
+If a second developer needs local prod access, add them as a separate entry in the [`access_entries` block](../live/prod/eks/terragrunt.stack.hcl) of the cluster unit.
