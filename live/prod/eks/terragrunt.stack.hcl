@@ -19,9 +19,9 @@ locals {
   private_subnets = [cidrsubnet(local.vpc_cidr, 8, 1), cidrsubnet(local.vpc_cidr, 8, 2)]
   public_subnets  = [cidrsubnet(local.vpc_cidr, 8, 3), cidrsubnet(local.vpc_cidr, 8, 4)]
 
-  # IAM principals that need local destroy access when CI deployed the cluster.
+  # IAM principal that needs local destroy access when CI deployed the cluster.
   # Get your ARN: aws sts get-caller-identity --query Arn --output text
-  local_admin_arn = "arn:aws:iam::504913911420:user/terragrunt"
+  local_admin_arn = get_env("EKS_LOCAL_ADMIN_ARN", "")
 }
 
 unit "route53_hosted_zone_public" {
@@ -109,8 +109,8 @@ unit "cluster" {
       enabled = false
     }
 
-    access_entries = {
-      terragrunt = {
+    access_entries = local.local_admin_arn != "" ? {
+      local_admin = {
         principal_arn = local.local_admin_arn
         policy_associations = {
           admin = {
@@ -121,7 +121,7 @@ unit "cluster" {
           }
         }
       }
-    }
+    } : {}
   }
 }
 

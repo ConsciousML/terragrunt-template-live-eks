@@ -112,28 +112,6 @@ Runs automatically when a PR is **merged to `main`** and deploys changes to the 
 
 ## Local Access After CD Deployment
 
-CD registers only the GitHub Actions IAM role as the cluster admin. If you need to run `terragrunt destroy` or any Kubernetes-backed unit locally against prod, your local IAM identity must be added as an access entry before CD runs.
+The bootstrap automatically registers the IAM identity used to run it as a cluster admin. It stores that ARN as the `EKS_LOCAL_ADMIN_ARN` GitHub Actions secret, and CD injects it on every apply so the access entry is always in sync.
 
-Get your ARN:
-```bash
-aws sts get-caller-identity --query Arn --output text
-```
-
-Then populate `access_entries` in [`live/prod/eks/terragrunt.stack.hcl`](../live/prod/eks/terragrunt.stack.hcl):
-```hcl
-access_entries = {
-  your_key = {
-    principal_arn = "arn:aws:iam::<account-id>:<user|role>/<name>"
-    policy_associations = {
-      admin = {
-        policy_arn = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
-        access_scope = {
-          type = "cluster"
-        }
-      }
-    }
-  }
-}
-```
-
-Include this in your PR so CD applies it alongside your infrastructure changes.
+If a second developer needs local prod access, add them as a separate entry in the [`access_entries` block](../live/prod/eks/terragrunt.stack.hcl) of the cluster unit.
