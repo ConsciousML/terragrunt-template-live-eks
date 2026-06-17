@@ -194,7 +194,7 @@ Wire hooks automatically into git automatically:
 prek install
 ```
 
-Run hooks on demande:
+Run hooks on demand:
 ```bash
 prek run
 ```
