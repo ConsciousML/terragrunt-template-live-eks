@@ -1,5 +1,5 @@
 locals {
-  version_catalog            = "v0.0.6"
+  version_catalog            = "v0.0.8"
   version_vpc                = "6.6.0"
   version_cluster            = "21.15.1"
   version_aws_lbc            = "3.2.1"
@@ -327,5 +327,24 @@ unit "tailscale_split_dns" {
 
   values = {
     version = local.version_catalog
+  }
+}
+
+unit "argocd_app_of_apps" {
+  source = "github.com/${local.github_username_catalog}/${local.github_repo_name_catalog}//units/eks/addons/argocd/app_of_apps?ref=${local.version_catalog}"
+  path   = "eks/addons/argocd/app_of_apps"
+
+  values = {
+    version               = local.version_catalog
+    name                  = "app-of-apps"
+    namespace             = "argocd"
+    path                  = "apps"
+    target_revision       = "main"
+    project               = "default"
+    destination_namespace = "argocd"
+    destination_server    = "https://kubernetes.default.svc"
+    finalizers            = ["resources-finalizer.argocd.argoproj.io"]
+    sync_options          = ["CreateNamespace=true"]
+    prune                 = true
   }
 }
