@@ -30,7 +30,7 @@ Repeat the following for each environment (replacing `<environment>` by `staging
 source .env
 cd live/bootstrap/setup_dns/<environment>/stack
 terragrunt stack run init
-terragrunt run --all apply --backend-bootstrap --non-interactive
+terragrunt run --all apply --backend-bootstrap --non-interactive --no-stack-generate
 ```
 
 

@@ -36,7 +36,7 @@ Re-apply the Tailscale bootstrap to register the new CIDR in `autoApprovers`. Se
 source .env
 cd live/bootstrap/tailscale
 terragrunt stack run init
-terragrunt run --all apply --backend-bootstrap --non-interactive
+terragrunt run --all apply --backend-bootstrap --non-interactive --no-stack-generate
 ```
 
 ### 3. Add the CIDR to the live repo
@@ -93,5 +93,5 @@ Update `live/pre-staging/region.hcl` if the new environment targets a different 
 source .env
 cd live/pre-staging/eks
 terragrunt stack run init
-terragrunt run --all apply --backend-bootstrap --non-interactive
+terragrunt run --all apply --backend-bootstrap --non-interactive --no-stack-generate
 ```

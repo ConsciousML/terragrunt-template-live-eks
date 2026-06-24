@@ -116,7 +116,7 @@ jobs:
         run: |
           cd live/prod
           terragrunt stack run init
-          terragrunt run --all apply --backend-bootstrap --non-interactive
+          terragrunt run --all apply --backend-bootstrap --non-interactive --no-stack-generate
 
   revoke-oauth:
     # Revokes the temporary Tailscale OAuth client created during apply.

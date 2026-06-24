@@ -21,5 +21,5 @@ Run once before running Terratest in CI:
 source .env
 cd live/bootstrap/tailscale
 terragrunt stack run init
-terragrunt run --all apply --backend-bootstrap --non-interactive
+terragrunt run --all apply --backend-bootstrap --non-interactive --no-stack-generate
 ```
