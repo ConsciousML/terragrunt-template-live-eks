@@ -1,5 +1,5 @@
 locals {
-  version_catalog            = "v0.0.8"
+  version_catalog            = "v0.0.9"
   version_vpc                = "6.6.0"
   version_cluster            = "21.15.1"
   version_aws_lbc            = "3.2.1"
@@ -91,7 +91,8 @@ unit "cluster" {
 
     eks_managed_node_groups = {
       example = {
-        ami_type = "AL2023_x86_64_STANDARD"
+        ami_type            = "AL2023_x86_64_STANDARD"
+        ami_release_version = "1.35.6-20260618"
 
         instance_types = ["t3.medium"]
 
@@ -176,6 +177,7 @@ unit "argocd" {
             "alb.ingress.kubernetes.io/backend-protocol" = "HTTP"
             "alb.ingress.kubernetes.io/listen-ports"     = "[{\"HTTP\":80}, {\"HTTPS\":443}]"
             "alb.ingress.kubernetes.io/ssl-redirect"     = "443"
+            "external-dns.alpha.kubernetes.io/scope"     = "private"
           }
           aws = {
             serviceType            = "ClusterIP"
@@ -197,9 +199,74 @@ unit "route53_hosted_zone_private" {
   }
 }
 
-unit "iam_role_external_dns" {
-  source = "github.com/${local.github_username_catalog}/${local.github_repo_name_catalog}//units/eks/addons/external_dns/iam_role?ref=${local.version_catalog}"
-  path   = "eks/addons/external_dns/iam_role"
+unit "gateway_api_crds" {
+  source = "github.com/${local.github_username_catalog}/${local.github_repo_name_catalog}//units/eks/addons/kubectl_manifest_from_url?ref=${local.version_catalog}"
+  path   = "eks/addons/gateway_api/crds"
+
+  values = {
+    version = local.version_catalog
+    url     = "https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.5.0/standard-install.yaml"
+  }
+}
+
+unit "aws_lbc_gateway_api_crds" {
+  source = "github.com/${local.github_username_catalog}/${local.github_repo_name_catalog}//units/eks/addons/kubectl_manifest_from_url?ref=${local.version_catalog}"
+  path   = "eks/addons/aws_load_balancer_controller/gateway_api_crds"
+
+  values = {
+    version = local.version_catalog
+    url     = "https://raw.githubusercontent.com/kubernetes-sigs/aws-load-balancer-controller/v${local.version_aws_lbc}/config/crd/gateway/gateway-crds.yaml"
+  }
+}
+
+unit "gateway_api_namespace" {
+  source = "github.com/${local.github_username_catalog}/${local.github_repo_name_catalog}//units/eks/addons/gateway_api/namespace?ref=${local.version_catalog}"
+  path   = "eks/addons/gateway_api/namespace"
+
+  values = {
+    version = local.version_catalog
+  }
+}
+
+unit "gateway_api_gateway_class" {
+  source = "github.com/${local.github_username_catalog}/${local.github_repo_name_catalog}//units/eks/addons/gateway_api/gateway_class?ref=${local.version_catalog}"
+  path   = "eks/addons/gateway_api/gateway_class"
+
+  values = {
+    version = local.version_catalog
+  }
+}
+
+unit "gateway_api_target_group_configuration_public" {
+  source = "github.com/${local.github_username_catalog}/${local.github_repo_name_catalog}//units/eks/addons/gateway_api/target_group_configuration/public?ref=${local.version_catalog}"
+  path   = "eks/addons/gateway_api/target_group_configuration/public"
+
+  values = {
+    version = local.version_catalog
+  }
+}
+
+unit "gateway_api_load_balancer_configuration_public" {
+  source = "github.com/${local.github_username_catalog}/${local.github_repo_name_catalog}//units/eks/addons/gateway_api/load_balancer_configuration/public?ref=${local.version_catalog}"
+  path   = "eks/addons/gateway_api/load_balancer_configuration/public"
+
+  values = {
+    version = local.version_catalog
+  }
+}
+
+unit "gateway_api_gateway_public" {
+  source = "github.com/${local.github_username_catalog}/${local.github_repo_name_catalog}//units/eks/addons/gateway_api/gateway/public?ref=${local.version_catalog}"
+  path   = "eks/addons/gateway_api/gateway/public"
+
+  values = {
+    version = local.version_catalog
+  }
+}
+
+unit "iam_role_external_dns_private" {
+  source = "github.com/${local.github_username_catalog}/${local.github_repo_name_catalog}//units/eks/addons/external_dns/private/iam_role?ref=${local.version_catalog}"
+  path   = "eks/addons/external_dns/private/iam_role"
 
   values = {
     version = local.version_catalog
@@ -207,21 +274,22 @@ unit "iam_role_external_dns" {
   }
 }
 
-unit "external_dns" {
-  source = "github.com/${local.github_username_catalog}/${local.github_repo_name_catalog}//units/eks/addons/external_dns/helm?ref=${local.version_catalog}"
-  path   = "eks/addons/external_dns/helm"
+unit "external_dns_private" {
+  source = "github.com/${local.github_username_catalog}/${local.github_repo_name_catalog}//units/eks/addons/external_dns/private/helm?ref=${local.version_catalog}"
+  path   = "eks/addons/external_dns/private/helm"
 
   values = {
     version            = local.version_catalog
     helm_chart_version = local.version_external_dns
     helm_values = {
-      sources = ["service", "ingress"]
+      sources = ["service", "ingress", "gateway-httproute"]
       provider = {
         name = "aws"
       }
-      registry = "txt"
-      policy   = "sync"
-      logLevel = "info"
+      registry         = "txt"
+      policy           = "sync"
+      logLevel         = "info"
+      annotationFilter = "external-dns.alpha.kubernetes.io/scope=private"
       extraArgs = {
         "aws-zone-type" = "private"
       }
@@ -229,9 +297,42 @@ unit "external_dns" {
   }
 }
 
+unit "iam_role_external_dns_public" {
+  source = "github.com/${local.github_username_catalog}/${local.github_repo_name_catalog}//units/eks/addons/external_dns/public/iam_role?ref=${local.version_catalog}"
+  path   = "eks/addons/external_dns/public/iam_role"
+
+  values = {
+    version = local.version_catalog
+    tags    = {}
+  }
+}
+
+unit "external_dns_public" {
+  source = "github.com/${local.github_username_catalog}/${local.github_repo_name_catalog}//units/eks/addons/external_dns/public/helm?ref=${local.version_catalog}"
+  path   = "eks/addons/external_dns/public/helm"
+
+  values = {
+    version            = local.version_catalog
+    helm_chart_version = local.version_external_dns
+    helm_values = {
+      sources = ["service", "ingress", "gateway-httproute"]
+      provider = {
+        name = "aws"
+      }
+      registry         = "txt"
+      policy           = "sync"
+      logLevel         = "info"
+      annotationFilter = "external-dns.alpha.kubernetes.io/scope=public"
+      extraArgs = {
+        "aws-zone-type" = "public"
+      }
+    }
+  }
+}
+
 unit "acm_certificate" {
-  source = "github.com/${local.github_username_catalog}/${local.github_repo_name_catalog}//units/eks/acm_certificate?ref=${local.version_catalog}"
-  path   = "eks/acm_certificate"
+  source = "github.com/${local.github_username_catalog}/${local.github_repo_name_catalog}//units/eks/route53/acm_certificate?ref=${local.version_catalog}"
+  path   = "eks/route53/acm_certificate"
 
   values = {
     version = local.version_catalog

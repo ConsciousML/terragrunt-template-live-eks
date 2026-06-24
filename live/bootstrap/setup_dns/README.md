@@ -10,10 +10,12 @@ See the [catalog README](https://github.com/ConsciousML/terragrunt-template-cata
 live/bootstrap/setup_dns/
   staging/
     environment.hcl        ← environment = "staging"
-    terragrunt.stack.hcl
+    stack/
+      terragrunt.stack.hcl
   prod/
     environment.hcl        ← environment = "prod"
-    terragrunt.stack.hcl
+    stack/
+      terragrunt.stack.hcl
 ```
 
 ## Prerequisites
@@ -26,7 +28,7 @@ Repeat the following for each environment (replacing `<environment>` by `staging
 
 ```bash
 source .env
-cd pipelines/bootstrap/setup_dns/<environment>/stack
+cd live/bootstrap/setup_dns/<environment>/stack
 terragrunt stack run init
 terragrunt run --all apply --backend-bootstrap --non-interactive
 ```
@@ -42,21 +44,21 @@ terragrunt stack output --json setup_dns.route53_hosted_zone.name_servers
 
 Repeat the following for each environment.
 
-In your domain registrar, add 4 NS records for the subdomain using the nameservers from the output above.
+In your domain registrar, add 4 NS records for the environment zone using the nameservers from the output above.
 
 | Type | Host | Value |
 |------|------|-------|
-| NS | `<subdomain>.<environment>` | `ns-123.awsdns-12.com` |
-| NS | `<subdomain>.<environment>` | `ns-456.awsdns-34.net` |
-| NS | `<subdomain>.<environment>` | `ns-789.awsdns-56.org` |
-| NS | `<subdomain>.<environment>` | `ns-012.awsdns-78.co.uk` |
+| NS | `<environment>` | `ns-123.awsdns-12.com` |
+| NS | `<environment>` | `ns-456.awsdns-34.net` |
+| NS | `<environment>` | `ns-789.awsdns-56.org` |
+| NS | `<environment>` | `ns-012.awsdns-78.co.uk` |
 
-Replace `<subdomain>.<environment>` with your actual subdomain and environment (`argocd.stagimg` for example).
+Replace `<environment>` with your actual environment (`staging` or `prod`).
 
 ### Verify propagation
 
 ```bash
-dig NS argocd.staging.axelmendoza.com
+dig NS staging.axelmendoza.com
 ```
 
 Delegation is working when 4 AWS nameservers appear in the `ANSWER SECTION`. With delegation in place, deploy the EKS stack — ACM validation, private zone creation, and ExternalDNS are all handled automatically.
