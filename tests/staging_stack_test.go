@@ -40,8 +40,11 @@ func TestStack(t *testing.T) {
 
 	terragrunt.ApplyAllContext(t, ctx, options)
 
-	// Use the Tailscale CLI to flush DNS cache
-	reconnectTailscale(t)
+	// Reconnect Tailscale to flush DNS cache — skipped in GitHub Actions where
+	// cycling the connection delays split DNS re-registration in systemd-resolved.
+	if os.Getenv("GITHUB_ACTIONS") != "true" {
+		reconnectTailscale(t)
+	}
 
 	// Remove logger for stack output to avoid printing sensitive information
 	silentOptions := &terragrunt.Options{
