@@ -1,5 +1,5 @@
 locals {
-  version_catalog            = "v0.0.10"
+  version_catalog            = "v0.0.11"
   version_vpc                = "6.6.0"
   version_cluster            = "21.15.1"
   version_aws_lbc            = "3.2.1"
@@ -415,24 +415,6 @@ unit "tailscale_split_dns" {
   }
 }
 
-unit "domain_name_argocd" {
-  source = "github.com/${local.github_username_catalog}/${local.github_repo_name_catalog}//units/eks/domain_name/argocd?ref=${local.version_catalog}"
-  path   = "eks/domain_name/argocd"
-
-  values = {
-    version = local.version_catalog
-  }
-}
-
-unit "domain_name_guestbook" {
-  source = "github.com/${local.github_username_catalog}/${local.github_repo_name_catalog}//units/eks/domain_name/guestbook?ref=${local.version_catalog}"
-  path   = "eks/domain_name/guestbook"
-
-  values = {
-    version = local.version_catalog
-  }
-}
-
 unit "argocd_app_of_apps" {
   source = "github.com/${local.github_username_catalog}/${local.github_repo_name_catalog}//units/eks/addons/argocd/app_of_apps?ref=${local.version_catalog}"
   path   = "eks/addons/argocd/app_of_apps"
@@ -449,5 +431,23 @@ unit "argocd_app_of_apps" {
     finalizers            = ["resources-finalizer.argocd.argoproj.io"]
     sync_options          = ["CreateNamespace=true"]
     prune                 = true
+  }
+}
+
+unit "domain_name_argocd" {
+  source = "github.com/${local.github_username_catalog}/${local.github_repo_name_catalog}//units/eks/domain_name/argocd?ref=${local.version_catalog}"
+  path   = "eks/domain_name/argocd"
+
+  values = {
+    version = local.version_catalog
+  }
+}
+
+unit "domain_name_guestbook" {
+  source = "github.com/${local.github_username_catalog}/${local.github_repo_name_catalog}//units/eks/domain_name/guestbook?ref=${local.version_catalog}"
+  path   = "eks/domain_name/guestbook"
+
+  values = {
+    version = local.version_catalog
   }
 }

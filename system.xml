@@ -23,7 +23,7 @@
 
         Per-stack files (under `live/{env}/eks/`):
         - `terragrunt.stack.hcl`: composes all catalog units; sets `version_catalog` and helm chart versions in `locals`
-        - `domains.hcl`: computes `domain_env`, `domain_argocd`, `domain_guestbook` from `dns.hcl` + `environment.hcl`
+        - `domains.hcl`: computes `domain_env`, `domain_env_private`, `domain_env_public`, `domain_private_argocd`, `domain_public_guestbook` from `dns.hcl` + `environment.hcl`
         - `cluster_name_env.hcl`: computes `cluster_name_full` as `{environment}-{cluster_name}`
 
         Unit source format in the live stack files:
