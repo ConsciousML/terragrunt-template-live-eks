@@ -2,6 +2,7 @@ package tests
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"net/http"
 	"os"
@@ -40,13 +41,43 @@ func TestStack(t *testing.T) {
 
 	terragrunt.ApplyAllContext(t, ctx, options)
 
-	// Reconnect Tailscale to flush DNS cache — skipped in GitHub Actions where
-	// cycling the connection delays split DNS re-registration in systemd-resolved.
+	// Reconnect Tailscale to flush DNS cache — skipped in GitHub Actions where it is not needed
 	if os.Getenv("GITHUB_ACTIONS") != "true" {
 		reconnectTailscale(t)
 	}
 
-	// Remove logger for stack output to avoid printing sensitive information
+	assertStack(t, ctx, stackDir, region)
+}
+
+// TestStackExists runs only the assertion phase against an already-deployed
+// staging stack. Use this when the infrastructure is already up and you want to
+// iterate on the Go logic without triggering an apply or destroy.
+//
+// Usage:
+//
+//	go test -v -run TestStackAssertions -timeout 10m
+func TestStackExists(t *testing.T) {
+	if os.Getenv("GITHUB_ACTIONS") == "true" {
+		t.Skip("skipped in CI — run locally against an already-deployed stack")
+	}
+
+	t.Parallel()
+
+	ctx := t.Context()
+
+	stackDir := "../live/staging/eks"
+
+	region := os.Getenv("AWS_REGION")
+	require.NotEmpty(t, region, "AWS_REGION must be set")
+
+	assertStack(t, ctx, stackDir, region)
+}
+
+// assertStack fetches stack outputs and runs all endpoint assertions.
+// It discards the Terragrunt logger to avoid printing sensitive output values.
+func assertStack(t *testing.T, ctx context.Context, stackDir string, region string) {
+	t.Helper()
+
 	silentOptions := &terragrunt.Options{
 		TerragruntDir:  stackDir,
 		TerragruntArgs: []string{"--log-level", "error"},

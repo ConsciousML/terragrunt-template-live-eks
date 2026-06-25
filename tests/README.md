@@ -4,12 +4,16 @@
 Perform the [quickstart](../../../README.md#getting-started) up to `Authenticate with AWS` (included).
 
 ## What It Tests
+
 `TestStack` deploys the [staging EKS stack](../live/staging/eks/terragrunt.stack.hcl) end-to-end and validates:
 
 - The stack applies via `terragrunt apply --all`
 - ArgoCD is reachable at the private Route53 domain (`/healthz` returns 200)
 - ArgoCD login succeeds using the admin password stored in Secrets Manager (`/api/v1/session` returns a valid JWT token)
+- The guestbook application is reachable at its public Route53 domain
 - Destroys the stack automatically (even if it fails)
+
+`TestStackExists` runs the same assertions against an already-deployed stack, skipping apply and destroy. Use it to iterate on test logic without re-deploying infrastructure.
 
 ## Run Terratest
 
@@ -28,9 +32,14 @@ Follow the [environment variables guide](https://github.com/ConsciousML/terragru
 source .env
 ```
 
-Run the test:
+Deploy and test the full stack (apply + assert + destroy):
 ```bash
-go test -v ./tests/... -timeout 60m
+go test -v -run TestStack ./tests/... -timeout 60m
+```
+
+Assert only against an already-deployed stack (no apply or destroy):
+```bash
+go test -v -run TestStackExists ./tests/... -timeout 10m
 ```
 
 ## Write a Test
