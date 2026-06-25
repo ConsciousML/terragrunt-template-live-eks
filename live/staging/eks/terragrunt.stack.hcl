@@ -1,5 +1,5 @@
 locals {
-  version_catalog            = "v0.0.9"
+  version_catalog            = "v0.0.10"
   version_vpc                = "6.6.0"
   version_cluster            = "21.15.1"
   version_aws_lbc            = "3.2.1"
@@ -409,6 +409,24 @@ unit "tailscale_connector" {
 unit "tailscale_split_dns" {
   source = "github.com/${local.github_username_catalog}/${local.github_repo_name_catalog}//units/eks/addons/tailscale/split_dns?ref=${local.version_catalog}"
   path   = "eks/addons/tailscale/split_dns"
+
+  values = {
+    version = local.version_catalog
+  }
+}
+
+unit "domain_name_argocd" {
+  source = "github.com/${local.github_username_catalog}/${local.github_repo_name_catalog}//units/eks/domain_name/argocd?ref=${local.version_catalog}"
+  path   = "eks/domain_name/argocd"
+
+  values = {
+    version = local.version_catalog
+  }
+}
+
+unit "domain_name_guestbook" {
+  source = "github.com/${local.github_username_catalog}/${local.github_repo_name_catalog}//units/eks/domain_name/guestbook?ref=${local.version_catalog}"
+  path   = "eks/domain_name/guestbook"
 
   values = {
     version = local.version_catalog
