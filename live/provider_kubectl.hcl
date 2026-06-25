@@ -1,16 +1,12 @@
-generate "provider_kubernetes" {
-  path      = "provider_kubernetes.tf"
+generate "provider_kubectl" {
+  path      = "provider_kubectl.tf"
   if_exists = "overwrite"
   contents  = <<EOF
-provider "kubernetes" {
+provider "kubectl" {
   host                   = data.aws_eks_cluster.this.endpoint
   cluster_ca_certificate = base64decode(data.aws_eks_cluster.this.certificate_authority[0].data)
   token                  = data.aws_eks_cluster_auth.this.token
-  exec {
-    api_version = "client.authentication.k8s.io/v1beta1"
-    args        = ["eks", "get-token", "--cluster-name", var.cluster_name]
-    command     = "aws"
-  }
+  load_config_file       = false
 }
 EOF
 }

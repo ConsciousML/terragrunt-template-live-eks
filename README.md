@@ -5,7 +5,13 @@
 [![CI](https://github.com/ConsciousML/terragrunt-template-live-eks/actions/workflows/ci.yaml/badge.svg)](https://github.com/ConsciousML/terragrunt-template-live-eks/actions/workflows/ci.yaml)
 [![PR's Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat)](http://makeapullrequest.com)
 
-A prod-ready live Terragrunt repository for deploying [EKS](https://aws.amazon.com/eks/) clusters across staging and prod with automated CI/CD.
+A prod-ready live Terragrunt repository for deploying [EKS](https://aws.amazon.com/eks/) clusters across `staging` and `prod` with automated CI/CD.
+
+The cluster comes with:
+- GitOps via ArgoCD and the App of Apps pattern
+- Public traffic routing via ALB and Gateway API
+- Automated DNS and TLS termination
+- VPN access via Tailscale
 
 ## Catalog vs Live Infrastructure
 
@@ -100,17 +106,19 @@ For more information, read the [AWS CLI authentication documentation](https://do
 ### Run the Bootstrap Pipelines
 Run the following once before using CI/CD:
 - [AWS GitHub Actions Auth](live/bootstrap/aws_gh_actions_auth/README.md): authenticates GitHub Actions with AWS
-- [Setup DNS](live/bootstrap/setup_dns/README.md): creates a [Route53 hosted zone](https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/hosted-zones-working-with.html) per environment to sign TLS certificates with ACM
+- [Setup DNS](live/bootstrap/setup_dns/README.md): creates one public [Route53 hosted zone](https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/hosted-zones-working-with.html) per environment, shared by all apps, delegated once at your registrar
 - [Tailscale](live/bootstrap/tailscale/README.md): creates [Tailscale](https://tailscale.com/) resources needed for CI and to access internal cluster tools (ArgoCD, etc.)
 
 ### Deploy a Staging EKS Cluster
-Deploy a stack that creates a VPC and an EKS cluster.
+Deploy a stack that creates a VPC, an EKS cluster, and all addons (ArgoCD, Gateway API, ExternalDNS, ESO, Tailscale).
+
+Ensure `TAILSCALE_OAUTH_CLIENT_ID` and `TAILSCALE_OAUTH_CLIENT_SECRET` are set in your `.env` (see the [environment variables guide](docs/environment-variables.md)).
 
 ```bash
 source .env
-cd live/staging
+cd live/staging/eks
 terragrunt stack run init
-terragrunt run --all apply --backend-bootstrap --non-interactive
+terragrunt run --all apply --backend-bootstrap --non-interactive --no-stack-generate
 ```
 
 Go into the AWS console and check that your resources have been created.
@@ -140,9 +148,9 @@ eks-pod-identity-agent-9pq6k   1/1     Running   0          41m
 
 ArgoCD is only reachable with the Tailscale Client running. Make sure you have completed the [Tailscale prerequisites](live/bootstrap/tailscale/README.md#prerequisites) before proceeding.
 
-The ArgoCD host is formed from `live/dns.hcl` as `<subdomain>.staging.<base_domain>` (replace `<subdomain>` and `<base_domain>` with the values from that file, e.g. `argocd.staging.axelmendoza.com`).
+The ArgoCD host is `argocd.private.staging.<base_domain>` (replace `<base_domain>` with the value from `live/dns.hcl`, e.g. `argocd.private.staging.axelmendoza.com`).
 
-**Web UI**: Open `https://<subdomain>.staging.<base_domain>` in your browser and log in with username `admin`. Retrieve the password with:
+**Web UI**: Open `https://argocd.private.staging.<base_domain>` in your browser and log in with username `admin`. Retrieve the password with:
 ```bash
 aws secretsmanager get-secret-value \
   --secret-id staging-argocd-password \
@@ -152,7 +160,7 @@ aws secretsmanager get-secret-value \
 
 **CLI**: Log in directly in one command:
 ```bash
-argocd login <subdomain>.staging.<base_domain> \
+argocd login argocd.private.staging.<base_domain> \
   --username admin \
   --password $(aws secretsmanager get-secret-value \
     --secret-id staging-argocd-password \
@@ -160,10 +168,18 @@ argocd login <subdomain>.staging.<base_domain> \
     --output text | jq -r .plaintext)
 ```
 
-Finally, cleanup by destroying the infrastructure (cwd in `live/staging/`):
+### Access the Guestbook App
+
+Open `https://guestbook.public.staging.<base_domain>` in your browser. No login required.
+
+Apps are deployed using the [App of Apps](https://github.com/ConsciousML/argocd-app-of-apps-template) pattern: a single ArgoCD Application bootstraps all child apps from that repository.
+
+### Destroy the Infrastructure
+
+Cleanup by destroying the infrastructure (cwd in `live/staging/eks`):
 
 ```bash
-terragrunt run --all destroy --non-interactive
+terragrunt run --all destroy --non-interactive --no-stack-generate
 ```
 
 ## Extend this Repository

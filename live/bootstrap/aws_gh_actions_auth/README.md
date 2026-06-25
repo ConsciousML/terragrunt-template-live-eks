@@ -18,5 +18,5 @@ Run once before CI/CD is operational:
 source .env
 cd live/bootstrap/aws_gh_actions_auth
 terragrunt stack run init
-terragrunt run --all apply --backend-bootstrap --non-interactive
+terragrunt run --all apply --backend-bootstrap --non-interactive --no-stack-generate
 ```

@@ -33,7 +33,7 @@ Then, run the [bootstrap pipelines](../README.md#run-the-bootstrap-pipelines) on
 
 3. Next, update a stack configuration or add a new stack. For example:
 ```hcl
-# live/dev/vpc_gce/terragrunt.stack.hcl
+# live/staging/vpc_gce/terragrunt.stack.hcl
 locals {
   version = "v0.0.3" # Change version, make sure to release on the catalog before
 }
@@ -62,7 +62,7 @@ stack "vpc_ec2" {
    - `run-terratest`: deploys real infrastructure to staging, validates end-to-end, and cleans up automatically — use this before merging significant changes
    - `skip-terratest`: skips the staging deployment
 
-8. Review and merge.
+8. Review and merge. Add the `skip-cd` label if you want to skip 9.
 
 9. CD automatically deploys to production after merge completes.
 
