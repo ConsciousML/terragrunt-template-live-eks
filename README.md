@@ -59,7 +59,7 @@ If you've forked both repositories, `github_username_catalog` and `github_userna
 
 3. Set `TAILSCALE_OAUTH_CLIENT_ID` and `TAILSCALE_OAUTH_CLIENT_SECRET` in your `.env` (see the [environment variables guide](docs/environment-variables.md))
 
-4. Karpenter's NodePool is capped at 10 vCPUs by default and provisions `spot` instances. Raise `spec.limits.cpu` or switch `karpenter.sh/capacity-type` to `on-demand` in the [staging](live/staging/eks/terragrunt.stack.hcl) and [prod](live/prod/eks/terragrunt.stack.hcl) EKS stacks for production stability.
+4. Karpenter's NodePool is capped at 10 vCPUs by default and provisions `spot` instances. Raise `spec.limits.cpu` or switch `karpenter.sh/capacity-type` to `on-demand` in the [staging](live/staging/eks/stack/terragrunt.stack.hcl) and [prod](live/prod/eks/stack/terragrunt.stack.hcl) EKS stacks for production stability.
 
 ### Installation
 
@@ -125,7 +125,7 @@ Deploy the [EKS Cluster Stack](https://github.com/ConsciousML/terragrunt-templat
 
 ```bash
 source .env
-cd live/staging/eks
+cd live/staging/eks/stack
 terragrunt stack run init
 terragrunt run --all apply --backend-bootstrap --non-interactive --no-stack-generate
 ```
@@ -185,7 +185,7 @@ Apps are deployed using the [App of Apps](https://github.com/ConsciousML/argocd-
 
 ### Destroy the Infrastructure
 
-Cleanup by destroying the infrastructure (cwd in `live/staging/eks`):
+Cleanup by destroying the infrastructure (cwd in `live/staging/eks/stack`):
 
 ```bash
 terragrunt run --all destroy --non-interactive --no-stack-generate

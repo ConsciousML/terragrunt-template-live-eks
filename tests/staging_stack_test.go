@@ -30,7 +30,7 @@ func TestStack(t *testing.T) {
 	_, err := exec.LookPath("tailscale")
 	require.NoError(t, err, "tailscale CLI not found in PATH — install it before running this test")
 
-	stackDir := "../live/staging/eks"
+	stackDir := "../live/staging/eks/stack"
 
 	options := &terragrunt.Options{
 		TerragruntDir:  stackDir,
@@ -65,7 +65,7 @@ func TestStackExists(t *testing.T) {
 
 	ctx := t.Context()
 
-	stackDir := "../live/staging/eks"
+	stackDir := "../live/staging/eks/stack"
 
 	region := os.Getenv("AWS_REGION")
 	require.NotEmpty(t, region, "AWS_REGION must be set")
