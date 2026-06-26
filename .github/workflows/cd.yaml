@@ -107,6 +107,9 @@ jobs:
       # Use newly created OAuth client instead of WIF credentials
       # WIF token expires after 10 min and apply can take longer
       # OAuth is a long lived credential but we delete it just after apply
+      - name: Ensure EC2 Spot service-linked role exists
+        run: aws iam create-service-linked-role --aws-service-name spot.amazonaws.com || true
+
       - name: Terragrunt apply on prod
         env:
           TAILSCALE_IDENTITY_TOKEN: ""
