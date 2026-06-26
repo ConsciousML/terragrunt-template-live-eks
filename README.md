@@ -226,7 +226,7 @@ prek run
 
 ## Create a New Environment
 
-See the [new environment guide](docs/new-environment.md) for the full sequence of steps.
+See the [new environment guide](docs/new_environment.md) for the full sequence of steps.
 
 ## License
 
