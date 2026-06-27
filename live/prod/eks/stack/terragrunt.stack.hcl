@@ -1,5 +1,5 @@
 locals {
-  version_catalog            = "v0.0.12"
+  version_catalog            = "v0.0.13"
   version_vpc                = "6.6.0"
   version_cluster            = "21.15.1"
   version_aws_lbc            = "3.2.1"
