@@ -1,5 +1,5 @@
 locals {
-  version_catalog            = "v0.0.11"
+  version_catalog            = "v0.0.13"
   version_vpc                = "6.6.0"
   version_cluster            = "21.15.1"
   version_aws_lbc            = "3.2.1"
@@ -7,14 +7,17 @@ locals {
   version_external_dns       = "1.20.0"
   version_eso                = "2.4.1"
   version_tailscale_operator = "1.96.5"
+  version_karpenter_iam      = "21.24.0"
+  version_karpenter_helm     = "1.13.0"
 
   github_locals            = read_terragrunt_config(find_in_parent_folders("github.hcl")).locals
   github_username_catalog  = local.github_locals.github_username_catalog
   github_repo_name_catalog = local.github_locals.github_repo_name_catalog
 
-  environment = read_terragrunt_config(find_in_parent_folders("environment.hcl")).locals.environment
-  vpc_cidrs   = read_terragrunt_config(find_in_parent_folders("network.hcl")).locals.vpc_cidrs
-  vpc_cidr    = local.vpc_cidrs[local.environment]
+  environment       = read_terragrunt_config(find_in_parent_folders("environment.hcl")).locals.environment
+  cluster_name_full = read_terragrunt_config(find_in_parent_folders("cluster_name_env.hcl")).locals.cluster_name_full
+  vpc_cidrs         = read_terragrunt_config(find_in_parent_folders("network.hcl")).locals.vpc_cidrs
+  vpc_cidr          = local.vpc_cidrs[local.environment]
 
   private_subnets = [cidrsubnet(local.vpc_cidr, 8, 1), cidrsubnet(local.vpc_cidr, 8, 2)]
   public_subnets  = [cidrsubnet(local.vpc_cidr, 8, 3), cidrsubnet(local.vpc_cidr, 8, 4)]
@@ -57,6 +60,7 @@ unit "vpc" {
 
     private_subnet_tags = {
       "kubernetes.io/role/internal-elb" = 1
+      "karpenter.sh/discovery"          = local.cluster_name_full
     }
   }
 }
@@ -107,6 +111,85 @@ unit "cluster" {
     }
 
     access_entries = {}
+  }
+}
+
+unit "karpenter_iam" {
+  source = "github.com/${local.github_username_catalog}/${local.github_repo_name_catalog}//units/eks/addons/karpenter/iam?ref=${local.version_catalog}"
+  path   = "eks/addons/karpenter/iam"
+
+  values = {
+    version                 = local.version_karpenter_iam
+    enable_spot_termination = true
+    tags                    = {}
+  }
+}
+
+unit "karpenter" {
+  source = "github.com/${local.github_username_catalog}/${local.github_repo_name_catalog}//units/eks/addons/karpenter/helm?ref=${local.version_catalog}"
+  path   = "eks/addons/karpenter/helm"
+
+  values = {
+    version            = local.version_catalog
+    helm_chart_version = local.version_karpenter_helm
+    helm_values = {
+      settings = {
+        enableZonalShift = false
+      }
+      controller = {
+        resources = {
+          requests = {
+            cpu    = "1"
+            memory = "1Gi"
+          }
+          limits = {
+            cpu    = "1"
+            memory = "1Gi"
+          }
+        }
+      }
+    }
+  }
+}
+
+unit "karpenter_ec2_node_class" {
+  source = "github.com/${local.github_username_catalog}/${local.github_repo_name_catalog}//units/eks/addons/karpenter/ec2_node_class?ref=${local.version_catalog}"
+  path   = "eks/addons/karpenter/ec2_node_class"
+
+  values = {
+    version            = local.version_catalog
+    name               = "default"
+    ami_selector_terms = [{ alias = "al2023@v20260618" }]
+  }
+}
+
+unit "karpenter_node_pool" {
+  source = "github.com/${local.github_username_catalog}/${local.github_repo_name_catalog}//units/eks/addons/karpenter/node_pool?ref=${local.version_catalog}"
+  path   = "eks/addons/karpenter/node_pool"
+
+  values = {
+    version = local.version_catalog
+    spec = {
+      template = {
+        spec = {
+          requirements = [
+            { key = "kubernetes.io/arch", operator = "In", values = ["amd64"] },
+            { key = "kubernetes.io/os", operator = "In", values = ["linux"] },
+            { key = "karpenter.sh/capacity-type", operator = "In", values = ["spot"] },
+            { key = "karpenter.k8s.aws/instance-category", operator = "In", values = ["c", "m", "r"] },
+            { key = "karpenter.k8s.aws/instance-generation", operator = "Gt", values = ["2"] },
+          ]
+          expireAfter = "720h"
+        }
+      }
+      limits = {
+        cpu = 10
+      }
+      disruption = {
+        consolidationPolicy = "WhenEmptyOrUnderutilized"
+        consolidateAfter    = "1m"
+      }
+    }
   }
 }
 

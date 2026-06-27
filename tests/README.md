@@ -48,7 +48,7 @@ Copy `tests/staging_stack_test.go` in the `tests` directory. Use the suffix `*_t
 
 Next, change the stack directory to the path of the stack you want to test:
 ```go
-stackDir := "../live/staging/eks"
+stackDir := "../live/staging/eks/test"
 ```
 
 Finally, write additional test steps. For example, you can perform health checks or make a request to an API to ensure your infrastructure was deployed properly.

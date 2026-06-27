@@ -91,7 +91,7 @@ Update `live/pre-staging/region.hcl` if the new environment targets a different 
 
 ```bash
 source .env
-cd live/pre-staging/eks
+cd live/pre-staging/eks/stack
 terragrunt stack run init
 terragrunt run --all apply --backend-bootstrap --non-interactive --no-stack-generate
 ```

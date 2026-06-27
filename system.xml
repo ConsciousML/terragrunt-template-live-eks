@@ -22,7 +22,7 @@
         - `live/{env}/region.hcl`: sets `region` and `azs`
 
         Per-stack files (under `live/{env}/eks/`):
-        - `terragrunt.stack.hcl`: composes all catalog units; sets `version_catalog` and helm chart versions in `locals`
+        - `stack/terragrunt.stack.hcl`: composes all catalog units; sets `version_catalog` and helm chart versions in `locals`
         - `domains.hcl`: computes `domain_env`, `domain_env_private`, `domain_env_public`, `domain_private_argocd`, `domain_public_guestbook` from `dns.hcl` + `environment.hcl`
         - `cluster_name_env.hcl`: computes `cluster_name_full` as `{environment}-{cluster_name}`
 
@@ -41,10 +41,10 @@
 
     <eks_stack>
         The EKS stack is defined in:
-        - `live/staging/eks/terragrunt.stack.hcl`
-        - `live/prod/eks/terragrunt.stack.hcl`
+        - `live/staging/eks/stack/terragrunt.stack.hcl`
+        - `live/prod/eks/stack/terragrunt.stack.hcl`
 
-        The authoritative reference for what units these files should contain and what values each unit receives is `pipelines/dev/eks/terragrunt.stack.hcl` in the catalog repo at `version_catalog`. Read that file when you need to know the current unit inventory or expected values for a given tag.
+        The authoritative reference for what units these files should contain and what values each unit receives is `pipelines/dev/eks/stack/terragrunt.stack.hcl` in the catalog repo at `version_catalog`. Read that file when you need to know the current unit inventory or expected values for a given tag.
     </eks_stack>
 
     <bootstrap>
@@ -59,10 +59,10 @@
         A version bump has three parts: updating the catalog ref, aligning both live stacks against the catalog pipeline at the new tag, and checking shared HCL files.
 
         Step 1 — bump `version_catalog` in `locals` at the top of both:
-        - `live/staging/eks/terragrunt.stack.hcl`
-        - `live/prod/eks/terragrunt.stack.hcl`
+        - `live/staging/eks/stack/terragrunt.stack.hcl`
+        - `live/prod/eks/stack/terragrunt.stack.hcl`
 
-        Step 2 — diff `pipelines/dev/eks/terragrunt.stack.hcl` in the catalog repo at the new tag against each live stack file and apply:
+        Step 2 — diff `pipelines/dev/eks/stack/terragrunt.stack.hcl` in the catalog repo at the new tag against each live stack file and apply:
         - Add or remove `unit` blocks to match the catalog pipeline
         - Sync `values` maps per unit (new keys, removed keys, changed defaults)
         - Adopt bumped helm chart version locals (`version_vpc`, `version_cluster`, `version_aws_lbc`, etc.)
@@ -78,6 +78,7 @@
         - Unit `source` uses the GitHub URL format with `?ref=${local.version_catalog}`, not `get_repo_root()`
         - `version = local.version_catalog` in every unit's `values` (catalog uses `local.version`)
         - The prod stack has `access_entries` with a `local.local_admin_arn` conditional so the local operator can destroy a CI-deployed cluster; staging uses `access_entries = {}` like the catalog dev stack
+        - `eks_managed_node_groups[*].min_size` stays at `2` in both live stacks; the catalog dev pipeline uses `1` as a cost-saving dev setting — do not adopt that value during a bump
     </version_bump_workflow>
 
     <ci_cd>

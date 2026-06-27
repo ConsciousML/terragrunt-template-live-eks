@@ -7,11 +7,12 @@
 
 A prod-ready live Terragrunt repository for deploying [EKS](https://aws.amazon.com/eks/) clusters across `staging` and `prod` with automated CI/CD.
 
-The cluster comes with:
+The [EKS Cluster Stack](https://github.com/ConsciousML/terragrunt-template-catalog-eks/blob/main/units/eks/README.md) supports:
 - GitOps via ArgoCD and the App of Apps pattern
 - Public traffic routing via ALB and Gateway API
 - Automated DNS and TLS termination
 - VPN access via Tailscale
+- Node autoscaling via Karpenter
 
 ## Catalog vs Live Infrastructure
 
@@ -55,6 +56,10 @@ If you've forked both repositories, `github_username_catalog` and `github_userna
 `<your-live-repo-name>` should be the same name you chose in the previous section and `<your-catalog-repo-name>` should be the name you chose in the `### Fork the Repository` section of the [catalog repository](https://github.com/ConsciousML/terragrunt-template-catalog-eks/blob/main/README.md#fork-the-repository). 
 
 2. Change each `live/*/region.hcl` to match your desired AWS region.
+
+3. Set `TAILSCALE_OAUTH_CLIENT_ID` and `TAILSCALE_OAUTH_CLIENT_SECRET` in your `.env` (see the [environment variables guide](docs/environment-variables.md))
+
+4. Karpenter's NodePool is capped at 10 vCPUs by default and provisions `spot` instances. Raise `spec.limits.cpu` or switch `karpenter.sh/capacity-type` to `on-demand` in the [staging](live/staging/eks/stack/terragrunt.stack.hcl) and [prod](live/prod/eks/stack/terragrunt.stack.hcl) EKS stacks for production stability.
 
 ### Installation
 
@@ -109,14 +114,18 @@ Run the following once before using CI/CD:
 - [Setup DNS](live/bootstrap/setup_dns/README.md): creates one public [Route53 hosted zone](https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/hosted-zones-working-with.html) per environment, shared by all apps, delegated once at your registrar
 - [Tailscale](live/bootstrap/tailscale/README.md): creates [Tailscale](https://tailscale.com/) resources needed for CI and to access internal cluster tools (ArgoCD, etc.)
 
-### Deploy a Staging EKS Cluster
-Deploy a stack that creates a VPC, an EKS cluster, and all addons (ArgoCD, Gateway API, ExternalDNS, ESO, Tailscale).
+Also run the following once per AWS account:
+```bash
+aws iam create-service-linked-role --aws-service-name spot.amazonaws.com || true
+```
+This creates the EC2 Spot service-linked role required for Karpenter to provision spot instances.
 
-Ensure `TAILSCALE_OAUTH_CLIENT_ID` and `TAILSCALE_OAUTH_CLIENT_SECRET` are set in your `.env` (see the [environment variables guide](docs/environment-variables.md)).
+### Deploy a Staging EKS Cluster
+Deploy the [EKS Cluster Stack](https://github.com/ConsciousML/terragrunt-template-catalog-eks/blob/main/units/eks/README.md):
 
 ```bash
 source .env
-cd live/staging/eks
+cd live/staging/eks/stack
 terragrunt stack run init
 terragrunt run --all apply --backend-bootstrap --non-interactive --no-stack-generate
 ```
@@ -176,7 +185,7 @@ Apps are deployed using the [App of Apps](https://github.com/ConsciousML/argocd-
 
 ### Destroy the Infrastructure
 
-Cleanup by destroying the infrastructure (cwd in `live/staging/eks`):
+Cleanup by destroying the infrastructure (cwd in `live/staging/eks/stack`):
 
 ```bash
 terragrunt run --all destroy --non-interactive --no-stack-generate
@@ -217,7 +226,7 @@ prek run
 
 ## Create a New Environment
 
-See the [new environment guide](docs/new-environment.md) for the full sequence of steps.
+See the [new environment guide](docs/new_environment.md) for the full sequence of steps.
 
 ## License
 

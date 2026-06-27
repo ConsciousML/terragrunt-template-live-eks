@@ -31,21 +31,11 @@ Then, run the [bootstrap pipelines](../README.md#run-the-bootstrap-pipelines) on
 
 2. Make changes into the Terraform code, units, and stacks in the catalog repository by following its [development workflow](https://github.com/ConsciousML/terragrunt-template-catalog-eks/blob/main/docs/development.md).
 
-3. Next, update a stack configuration or add a new stack. For example:
+3. Next, bump the catalog version and align the live stack. For example, in `live/staging/eks/stack/terragrunt.stack.hcl`:
 ```hcl
-# live/staging/vpc_gce/terragrunt.stack.hcl
 locals {
-  version = "v0.0.3" # Change version, make sure to release on the catalog before
-}
-
-stack "vpc_ec2" {
-  source = "github.com/ConsciousML/terragrunt-template-catalog-eks//stacks/vpc_ec2?ref=${local.version}"
-  path   = "infrastructure"
-
-  values = {
-    ec2_instance_type  = "t3.micro" 
-    # all other parameters ...
-  }
+  version_catalog = "v0.0.4" # bump to the new catalog tag
+  # adopt any new helm chart version locals from the catalog pipeline
 }
 ```
 
@@ -70,12 +60,15 @@ stack "vpc_ec2" {
 
 ### Continuous Integration (CI)
 
-Runs automatically on every pull request to `main` and is composed of seven jobs:
+Runs automatically on every pull request to `main` and is composed of eight jobs:
 
-#### 1. HCL Format Check
+#### 1. Draft PR Check
+Fails immediately if the PR is in draft mode — CI does not run on draft PRs.
+
+#### 2. HCL Format Check
 Validates that all Terragrunt (`.hcl`) files are properly formatted.
 
-#### 2. Validate & Plan
+#### 3. Validate & Plan
 Runs in parallel across **staging** and **prod** environments:
 - Generates stack configurations
 - Initializes Terragrunt with backend bootstrapping
@@ -84,21 +77,26 @@ Runs in parallel across **staging** and **prod** environments:
 
 For the **production environment**, the plan output is converted to HTML and uploaded as a downloadable artifact for review.
 
-#### 3. Terratest Label Gate
+A temporary Tailscale OAuth client is created for this job and revoked by the **Revoke Plan OAuth** cleanup job that always runs afterward.
+
+#### 4. Terratest Label Gate
 After validate & plan, CI checks that the PR has exactly one of two labels before proceeding. **This is a hard gate — CI fails if neither label is present:**
 - `run-terratest`: infrastructure tests will run
 - `skip-terratest`: infrastructure tests will be skipped
 
-#### 4. Terratest
+#### 5. Terratest
 See the [Terratest guide](../tests/README.md) for details on what is tested and how to extend it.
 
 Runs only when the `run-terratest` label is present:
 - Deploys the AWS infrastructure to the staging environment
 - Runs Go-based validation tests
 - Automatically destroys all test resources
-- Tailscale credentials are provisioned for the duration of the test and revoked immediately after
+- A temporary Tailscale OAuth client is created for the duration of the test and revoked by the **Revoke OAuth** cleanup job that always runs afterward
 
-#### 5. Comment on PR
+#### 6. Revoke OAuth (cleanup)
+Two cleanup jobs always run after the plan and terratest phases to revoke any temporary Tailscale OAuth clients, even on failure. This ensures no credentials are left behind.
+
+#### 7. Comment on PR
 Posts a comment with:
 - Link to the production plan artifact
 - Commit SHA that was tested
@@ -106,12 +104,16 @@ Posts a comment with:
 
 ### Continuous Deployment (CD)
 
-Runs automatically when a PR is **merged to `main`** and deploys changes to the **production environment**.
+Runs automatically when a PR is **merged to `main`** and is composed of three jobs:
 
-**Important**: CD automatically applies to production. Always review the production plan from CI before merging. If you want to skip the deployment, add the `skip-cd` tag before merging the PR.
+1. **Check skip-cd**: looks up the PR for the merged commit and checks for the `skip-cd` label. If the label is present, or no PR is found, deployment is skipped as a safety measure.
+2. **Apply**: ensures the EC2 Spot service-linked role exists, then runs `terragrunt run --all apply` against `prod`.
+3. **Revoke OAuth**: revokes the temporary Tailscale OAuth client created during apply, even on failure.
+
+**Important**: CD automatically applies to production. Always review the production plan from CI before merging. If you want to skip the deployment, add the `skip-cd` label before merging the PR.
 
 ## Local Access After CD Deployment
 
 The bootstrap automatically registers the IAM identity used to run it as a cluster admin. It stores that ARN as the `EKS_LOCAL_ADMIN_ARN` GitHub Actions secret, and CD injects it on every apply so the access entry is always in sync.
 
-If a second developer needs local prod access, add them as a separate entry in the [`access_entries` block](../live/prod/eks/terragrunt.stack.hcl) of the cluster unit.
+If a second developer needs local prod access, add them as a separate entry in the [`access_entries` block](../live/prod/eks/stack/terragrunt.stack.hcl) of the cluster unit.
