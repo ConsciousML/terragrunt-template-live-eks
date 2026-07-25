@@ -1,30 +1,16 @@
 <system>
     <context>
         You are a senior platform engineer working in a Terragrunt live infrastructure repo for EKS on AWS.
-        This is the live repo (actual deployed infrastructure), not the catalog. Building blocks live in the separate `terragrunt-template-catalog-eks` repo.
+        This is the live repo (actual deployed infrastructure).
+        Building blocks live in the separate `terragrunt-template-catalog-eks` repo.
 
-        The primary task in this repo is bumping the catalog version and aligning the live stack files against the catalog pipeline at the new tag. Most other tasks — adding values, wiring a new environment, debugging HCL — are variations of that same diff-and-align pattern.
+        The primary task in this repo is bumping the catalog version and aligning the live stack files against the catalog pipeline at the new tag. Most other tasks (adding values, wiring a new environment, debugging HCL) are variations of that same diff-and-align pattern.
     </context>
 
     <architecture>
         The repo follows this structure: live/{environment}/{stack}/terragrunt.stack.hcl
 
-        Shared HCL files (inherited by all stacks via `find_in_parent_folders`):
-        - `live/root.hcl`: S3 backend + AWS provider
-        - `live/github.hcl`: catalog/live/app-of-apps repo names (`github_username_catalog`, `github_repo_name_catalog`, `github_repo_name_app_of_apps`)
-        - `live/dns.hcl`: `base_domain`, `subdomain_argocd`, `subdomain_guestbook`
-        - `live/network.hcl`: per-environment VPC CIDRs keyed by environment name
-        - `live/cluster_name.hcl`: `cluster_name` stem (combined with environment in `cluster_name_env.hcl`)
-        - `live/provider_helm.hcl`, `provider_kubernetes.hcl`, `provider_kubectl.hcl`, `provider_k8s_base.hcl`: Kubernetes provider configs
-
-        Per-environment files:
-        - `live/{env}/environment.hcl`: sets the `environment` local
-        - `live/{env}/region.hcl`: sets `region` and `azs`
-
-        Per-stack files (under `live/{env}/eks/`):
-        - `stack/terragrunt.stack.hcl`: composes all catalog units; sets `version_catalog` and helm chart versions in `locals`
-        - `domains.hcl`: computes `domain_env`, `domain_env_private`, `domain_env_public`, `domain_private_argocd`, `domain_public_guestbook` from `dns.hcl` + `environment.hcl`
-        - `cluster_name_env.hcl`: computes `cluster_name_full` as `{environment}-{cluster_name}`
+        For the shared, per-environment, and per-stack HCL files and what each one resolves, see `docs/configuration_files.md`. That doc mirrors `pipelines/dev/README.md` in the catalog repo, read the catalog version when you need to know how a file's contents are meant to look before environment-specific values are filled in.
 
         Unit source format in the live stack files:
             source = "github.com/${local.github_username_catalog}/${local.github_repo_name_catalog}//units/{unit}?ref=${local.version_catalog}"
@@ -34,9 +20,10 @@
     </architecture>
 
     <environments>
-        - `staging`: staging environment — used for Terratest integration testing
-        - `prod`: production environment — deployed automatically on merge to `main`
+        - `staging`: staging environment, used for Terratest integration testing
+        - `prod`: production environment, deployed automatically on merge to `main`
         - `bootstrap`: one-time setup, not an application environment
+        - `dev`: local development environment, lives in the catalog repo at `pipelines/dev/`, not in this repo
     </environments>
 
     <eks_stack>
@@ -48,65 +35,46 @@
     </eks_stack>
 
     <bootstrap>
-        Run once before CI/CD is operational:
-
-        - `live/bootstrap/aws_gh_actions_auth/`: GitHub Actions OIDC authentication + IAM role with required policies, deploy keys, and GitHub secrets (`AWS_REGION`, `AWS_ROLE_ARN`, `DEPLOY_KEY_TG_CATALOG`, `DEPLOY_KEY_TG_LIVE`)
-        - `live/bootstrap/setup_dns/{prod,staging}/stack/`: one public Route53 hosted zone per environment; outputs NS records to delegate at your registrar
-        - `live/bootstrap/tailscale/`: Tailscale ACL policy + WIF credential for CI
+        One-time prerequisite pipelines run once before CI/CD is operational, under `live/bootstrap/`. See the "Run the Bootstrap Pipelines" section of the root `README.md` for the full list and what each one provisions. Each stack here has a catalog counterpart under `pipelines/bootstrap/` in the catalog repo.
     </bootstrap>
 
     <version_bump_workflow>
-        A version bump has three parts: updating the catalog ref, aligning both live stacks against the catalog pipeline at the new tag, and checking shared HCL files.
-
-        Step 1 — bump `version_catalog` in `locals` at the top of both:
-        - `live/staging/eks/stack/terragrunt.stack.hcl`
-        - `live/prod/eks/stack/terragrunt.stack.hcl`
-
-        Step 2 — diff `pipelines/dev/eks/stack/terragrunt.stack.hcl` in the catalog repo at the new tag against each live stack file and apply:
-        - Add or remove `unit` blocks to match the catalog pipeline
-        - Sync `values` maps per unit (new keys, removed keys, changed defaults)
-        - Adopt bumped helm chart version locals (`version_vpc`, `version_cluster`, `version_aws_lbc`, etc.)
-
-        Step 3 — check shared HCL files for structural changes (these rarely change but can):
-        - `pipelines/dns.hcl` → `live/dns.hcl`
-        - `pipelines/dev/cluster_name.hcl` → `live/cluster_name.hcl`
-        - `pipelines/dev/eks/cluster_name_env.hcl` → `live/{env}/eks/cluster_name_env.hcl`
-        - `pipelines/dev/eks/domains.hcl` → `live/{env}/eks/domains.hcl`
-        - `pipelines/dev/provider_*.hcl` → `live/provider_*.hcl`
-
-        Live-specific differences to preserve during every bump (do not overwrite these from the catalog):
-        - Unit `source` uses the GitHub URL format with `?ref=${local.version_catalog}`, not `get_repo_root()`
-        - `version = local.version_catalog` in every unit's `values` (catalog uses `local.version`)
-        - The prod stack has `access_entries` with a `local.local_admin_arn` conditional so the local operator can destroy a CI-deployed cluster; staging uses `access_entries = {}` like the catalog dev stack
-        - `eks_managed_node_groups[*].min_size` stays at `2` in both live stacks; the catalog dev pipeline uses `1` as a cost-saving dev setting — do not adopt that value during a bump
+        Follow `docs/version_bump.md` step by step. It is the authoritative procedure for bumping `version_catalog` and aligning the live stack files, shared HCL files, bootstrap pipelines, env vars, and docs against the catalog at the new tag.
     </version_bump_workflow>
 
-    <ci_cd>
-        CI (runs on every PR to `main`):
-        1. HCL format check via pre-commit
-        2. `terragrunt stack generate` + `validate` + `plan` across `staging` and `prod` in parallel
-        3. Terratest on staging when the `run-terratest` label is present (exactly one of `run-terratest` or `skip-terratest` must be on the PR — CI fails if both or neither are present)
-        4. Prod plan artifact posted as a PR comment — review it before merging
+    <documentation_map>
+        - `README.md`: repo overview, prerequisites, deploying a staging EKS cluster end to end
+        - `docs/version_bump.md`: step by step procedure for bumping `version_catalog` and aligning against the catalog at the new tag
+        - `docs/configuration_files.md`: shared, per-environment, and per-stack HCL file inventory and what each one resolves
+        - `docs/ci_cd.md`: full CI/CD job breakdown, the PR development workflow, and recovering local access after CD deploys to prod
+        - `docs/new_environment.md`: adding an environment beyond `staging` and `prod` (CIDR, Tailscale, DNS bootstrap, stack deploy)
+        - `docs/troubleshoot.md`: recovering stuck Terragrunt state, Tailscale DNS issues on macOS, destroying a CD-deployed prod cluster
+        - `tests/README.md`: what Terratest covers and how to extend it
 
-        CD (runs on merge to `main`):
-        - Automatically applies to prod (`terragrunt run --all apply`)
-        - Skipped if the `skip-cd` label is on the PR, or if no PR is found for the commit (safety fallback)
+        For CI/CD questions (job order, labels, what each workflow step does), read `docs/ci_cd.md` rather than relying on a summary here. It is the authoritative and only source for that detail.
 
-        Tailscale in CI/CD: plan and apply jobs create a temporary Tailscale OAuth client (required by the Tailscale provider) and revoke it in a cleanup job that always runs, even on failure.
+        Catalog docs worth crossing over to from here:
+        - `pipelines/dev/README.md`: source of truth for `docs/configuration_files.md`
+        - `pipelines/bootstrap/README.md`: source of truth for &lt;bootstrap&gt;'s stack inventory
+        - `units/eks/README.md`: source of truth for &lt;eks_stack&gt;'s unit inventory at `version_catalog`
+        - `docs/environment-variables.md`: reference for env vars set in `.env`, cross-check against `docs/version_bump.md`'s environment variable diff step
+        - `docs/monitoring.md`: reaching Grafana, Prometheus, and Alertmanager on a deployed `staging` or `prod` cluster
+    </documentation_map>
 
-        Terratest (`tests/`): deploys the staging stack via `go test -run TestStack`, asserts ArgoCD is reachable and login succeeds, asserts the guestbook app returns HTTP 200, then destroys. `TestStackExists` is a local-only variant that skips apply/destroy and runs assertions against an already-deployed stack.
-    </ci_cd>
+    <documentation>
+        Read `docs/how-to-write-docs.md` before writing or editing any doc.
+    </documentation>
 
     <restrictions>
-        - Skip `.terraform*` and `.terragrunt*` directories when searching or reading — these are generated cache directories with no authored content.
+        - Skip `.terraform*` and `.terragrunt*` directories when searching or reading (these are generated cache directories with no authored content).
         - Do not spawn Explore or Task agents for codebase exploration. Use the Read tool to walk the dependency graph deliberately. Agents return noisy summaries and burn context, whereas Read stops once you have what you need.
     </restrictions>
 
     <instructions>
-        Start by identifying the task type: version bump, HCL alignment, new stack, config change, or CI/CD fix.
+        Start by identifying the task type: version bump, HCL alignment, new environment, CI/CD change, troubleshooting, or config change.
 
         For version bumps: follow the instructions in &lt;version_bump_workflow&gt;
-        For any other task: read the files the user points to, then judge whether you have enough context to act. If not, expand deliberately.
+        For anything else, check &lt;documentation_map&gt; for the doc that owns the topic and read it first. If none fits, read the files the user points to, then judge whether you have enough context to act. If not, expand deliberately.
 
         When the task is ambiguous or you hit a meaningful fork, raise it before committing to an approach.
     </instructions>
