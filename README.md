@@ -8,11 +8,17 @@
 A prod-ready live Terragrunt repository for deploying [EKS](https://aws.amazon.com/eks/) clusters across `staging` and `prod` with automated CI/CD.
 
 The [EKS Cluster Stack](https://github.com/ConsciousML/terragrunt-template-catalog-eks/blob/main/units/eks/README.md) supports:
-- GitOps via ArgoCD and the App of Apps pattern
-- Public traffic routing via ALB and Gateway API
+- Persistent storage via EBS-backed `PersistentVolumeClaim`s
+- Cluster and workload metrics via Prometheus, Alertmanager, and Grafana
+- Workload resource-sizing recommendations via the VPA recommender and Goldilocks
+- Log aggregation via Loki
+- Public and private traffic routing via ALB and Gateway API
 - Automated DNS and TLS termination
+- Secrets synced from AWS Secrets Manager
+- GitOps via ArgoCD and the App of Apps pattern
 - VPN access via Tailscale
 - Node autoscaling via Karpenter
+- Pod-to-pod network flow visibility via Cilium and Hubble
 
 ## Catalog vs Live Infrastructure
 
@@ -42,18 +48,19 @@ Follow the getting started of the [EKS catalog repository](https://github.com/Co
 2. Under `Repository Name`, choose a name for your repository.
 
 ### Configuration
-1. In `live/github.hcl`, modify (by replacing `<YourGitHubUsername*>`, `<your-catalog-repo-name>`, and `<your-live-repo-name>`):
+1. In `live/github.hcl`, modify (by replacing `<YourGitHubUsernameOrOrgName>`, `<your-catalog-repo-name>`, and `<your-live-repo-name>`):
 ```hcl
 locals {
-  github_username_catalog  = "<YourUsernameWhereYourCatalogForkIs>"
-  github_username_live     = "<YourUsernameWhereYourLiveForkIs>"
-  github_repo_name_catalog = "<your-catalog-repo-name>"
-  github_repo_name_live    = "<your-live-repo-name>"
+  github_owner_catalog         = "<YourGitHubUsernameOrOrgName>"
+  github_username_live         = "<YourUsernameWhereYourLiveForkIs>"
+  github_repo_name_catalog     = "<your-catalog-repo-name>"
+  github_repo_name_live        = "<your-live-repo-name>"
+  github_repo_name_app_of_apps = "<your-app-of-apps-repo-name>"
 }
 ```
-If you've forked both repositories, `github_username_catalog` and `github_username_live` should point to your username (`ConsciousML` for my own forks).
+If you've forked all three repositories, `github_owner_catalog` and `github_username_live` should point to your username (`ConsciousML` for my own forks).
 
-`<your-live-repo-name>` should be the same name you chose in the previous section and `<your-catalog-repo-name>` should be the name you chose in the `### Fork the Repository` section of the [catalog repository](https://github.com/ConsciousML/terragrunt-template-catalog-eks/blob/main/README.md#fork-the-repository). 
+`<your-live-repo-name>` should be the same name you chose in the previous section, `<your-catalog-repo-name>` should be the name you chose in the `### Fork the Repository` section of the [catalog repository](https://github.com/ConsciousML/terragrunt-template-catalog-eks/blob/main/README.md#fork-the-repository), and `<your-app-of-apps-repo-name>` should match your fork of [argocd-app-of-apps-template](https://github.com/ConsciousML/argocd-app-of-apps-template).
 
 2. Change each `live/*/region.hcl` to match your desired AWS region.
 
@@ -180,17 +187,36 @@ argocd login argocd.private.staging.<base_domain> \
     --output text | jq -r .plaintext)
 ```
 
+### Disable the Public EKS Endpoint
+
+Logging into ArgoCD over Tailscale confirms the Tailscale Connector is routing into the VPC. For improved security, set `endpoint_public_access` to `false` in the [staging](live/staging/eks/stack/terragrunt.stack.hcl) or [prod](live/prod/eks/stack/terragrunt.stack.hcl) EKS stack, then re-apply just the `cluster` unit (cwd in `live/staging/eks/stack` or `live/prod/eks/stack`):
+
+```bash
+cd .terragrunt-stack/eks/cluster
+terragrunt apply --non-interactive
+```
+
+From this point on, `kubectl` and the AWS CLI can only reach the API server while connected to Tailscale.
+
+### Monitoring
+
+Grafana, Prometheus, and Alertmanager are only reachable via Tailscale, same as ArgoCD. See [Accessing the UIs](https://github.com/ConsciousML/terragrunt-template-catalog-eks/blob/main/docs/monitoring.md#accessing-the-uis) for UI URLs, what each tool is for, and how Alertmanager routes alerts to Slack.
+
 ### Access the Podinfo App
 
 Open `https://podinfo.public.staging.<base_domain>` in your browser. No login required.
-
-See [Accessing the UIs](https://github.com/ConsciousML/terragrunt-template-catalog-eks/blob/main/docs/monitoring.md#accessing-the-uis) for the other cluster UIs (Grafana, Prometheus, Alertmanager, Hubble).
 
 Apps are deployed using the [App of Apps](https://github.com/ConsciousML/argocd-app-of-apps-template) pattern: a single ArgoCD Application bootstraps all child apps from that repository.
 
 ### Destroy the Infrastructure
 
-Cleanup by destroying the infrastructure (cwd in `live/staging/eks/stack`):
+Destroying the [App of Apps unit](https://github.com/ConsciousML/terragrunt-template-catalog-eks/tree/main/units/eks/addons/argocd/app_of_apps) removes the Tailscale Connector, which is what routes API server traffic into the private endpoint. Once it's gone, you lose access to the cluster API unless you've already restored the public endpoint.
+
+**Caution**: Before destroying the stack:
+1. Set `endpoint_public_access` back to `true` (if you disabled the public EKS endpoint) and apply the `cluster` unit first
+2. Run `tailscale down`
+
+Finally, cleanup by destroying the infrastructure (cwd in `live/staging/eks/stack`, or see [Can't Destroy `prod` Cluster](docs/troubleshoot.md#cant-destroy-prod-cluster) for prod):
 
 ```bash
 terragrunt run --all destroy --non-interactive --no-stack-generate
