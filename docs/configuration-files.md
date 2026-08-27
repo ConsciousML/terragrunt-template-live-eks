@@ -46,5 +46,3 @@ pipelines/
 ```
 
 One exception: `pipelines/version.hcl` resolves `?ref=` from the current git branch, dev-only. Live pins `?ref=${local.version_catalog}` directly in each `stack/terragrunt.stack.hcl` instead, see the [development workflow](ci-cd.md#using-the-cicd-development-workflow) for how that tag is bumped.
-
-When bumping `version_catalog`, diff each live file against its catalog counterpart for structural changes, see step 3 of the version bump workflow in `system.xml`.
