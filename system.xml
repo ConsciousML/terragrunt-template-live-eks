@@ -90,6 +90,9 @@
 
         When you face an important design decision, pause and discuss with the user.
 
+        Given a list of instructions, perform all of them without stopping to confirm each,
+        except one with a meaningful design decision to discuss.
+
         When unsure whether something exists, check the official docs or use MCP before answering.
     </instructions>
 </system>
