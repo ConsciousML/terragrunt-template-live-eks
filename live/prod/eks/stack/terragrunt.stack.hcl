@@ -804,7 +804,7 @@ unit "karpenter_ec2_node_class" {
     name    = "default"
     # PROD: dev uses ami_alias = "al2023@latest", prod pins a tested AMI release instead so
     # nodes don't roll on every new AMI publish.
-    ami_selector_terms = [{ alias = "al2023@v20260618" }]
+    ami_alias = "al2023@v20260618"
     # Matches kubelet's own default (what the MNG's nodes already get). Without this, Karpenter
     # computes a lower ceiling from the plain per-ENI formula, blind to the VPC CNI addon's
     # ENABLE_PREFIX_DELEGATION setting, which starves small instance types of pod slots.
