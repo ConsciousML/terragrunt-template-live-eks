@@ -8,25 +8,33 @@ Bump `version_catalog` in `locals` at the top of both:
 - `live/staging/eks/stack/terragrunt.stack.hcl`
 - `live/prod/eks/stack/terragrunt.stack.hcl`
 
+## Align `mise.toml`
+
+Diff the catalog's `mise.toml` against live's `mise.toml`. For every tool present in both files, match the catalog's pinned version exactly, since CI and local runs must use the same tool versions the catalog pipeline was built and tested against. A tool that only exists in the catalog's file is module/dev tooling live doesn't need.
+
+## Diff Environment Variables
+
+Diff the catalog's `.env.example` against live's `.env.example`. A new env var here usually pairs with a new `get_env(...)` call added in the bootstrap or stack-file alignment steps below, if that pipeline or unit is adopted, so revisit this diff after those steps if a new entry's purpose isn't clear yet. Cross-check any new entry against the CI/CD secrets documented in [`ci-cd.md`](ci-cd.md) and update both if needed.
+
+Restate each new entry's comment through live's convention (a URL anchor into [`environment-variables.md`](environment-variables.md)) rather than copying the catalog's local-README-reference comment verbatim.
+
+## Diff the Bootstrap Pipelines
+
+Ask the user whether bootstrap should be checked this bump, it isn't applied by CI/CD, so a missed change won't break a build, but it drifts silently, and not every bump needs it.
+
+If yes, diff `pipelines/bootstrap/` against `live/bootstrap/`. Look for a new top-level stack in the catalog with no live counterpart, an existing bootstrap stack restructured, and renamed units inside an existing stack. Decide per stack whether live should adopt it.
+
+After adopting any changes, run `terragrunt plan` against each affected live bootstrap stack to confirm whether an apply is actually needed. Don't assume the structural diff alone tells you the live state has drifted.
+
+## Check Shared HCL Files
+
+Check shared HCL files for structural changes, including renames of shared locals, not just additions, since a rename ripples into every stack and bootstrap file reading that file's locals. See the "Catalog Equivalents" section of [`configuration-files.md`](configuration-files.md) for the full catalog-to-live file mapping to diff.
+
 ## Align the Stack Files
 
 Align each live stack file with `pipelines/dev/eks/stack/terragrunt.stack.hcl` at the new tag. Match its units, its `values`, and its `locals` (chart versions and other pinned versions).
 
-The required drift is whatever the dev pipeline's own inline comments mark as dev-only, for example `min_size = 1`, `access_entries = {}`, or disabled log types. Keep the live-side equivalent for those instead of adopting the dev value. Re-read these comments every bump, since which settings are dev-only can change between tags.
-
-## Check Shared HCL Files
-
-Check shared HCL files for structural changes. These rarely change. See the "Catalog Equivalents" section of [`configuration-files.md`](configuration-files.md) for the full catalog-to-live file mapping to diff.
-
-## Diff the Bootstrap Pipelines
-
-Diff `pipelines/bootstrap/` against `live/bootstrap/`. Bootstrap isn't applied by CI/CD, so a missed change won't break a build, but it drifts silently.
-
-Look for a new top-level stack in the catalog with no live counterpart, an existing bootstrap stack restructured (for example `tailscale` splitting into `acl` and `wif`), and renamed units inside an existing stack. Decide per stack whether live should adopt it.
-
-## Diff Environment Variables
-
-Diff the catalog's `.env.example` against live's `.env.example`. A new env var here usually pairs with a new `get_env(...)` call in a stack or bootstrap file from the previous two steps. Cross-check any new entry against the CI/CD secrets documented in [`ci-cd.md`](ci-cd.md) and update both if needed.
+The required drift is whatever the dev pipeline's own inline comments mark as dev-only. Keep the live-side equivalent for those instead of adopting the dev value. Re-read these comments every bump, since which settings are dev-only can change between tags.
 
 ## Align the Docs
 
