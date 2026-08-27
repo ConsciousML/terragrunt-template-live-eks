@@ -1,8 +1,8 @@
 locals {
-  version = "v0.0.13"
+  version = "v0.1.2"
 
   github_locals            = read_terragrunt_config(find_in_parent_folders("github.hcl")).locals
-  github_username_catalog  = local.github_locals.github_username_catalog
+  github_owner_catalog     = local.github_locals.github_owner_catalog
   github_username_live     = local.github_locals.github_username_live
   github_repo_name_live    = local.github_locals.github_repo_name_live
   github_repo_name_catalog = local.github_locals.github_repo_name_catalog
@@ -11,11 +11,11 @@ locals {
 }
 
 stack "aws_gh_actions_auth" {
-  source = "github.com/${local.github_username_catalog}/${local.github_repo_name_catalog}//stacks/aws_gh_actions_auth?ref=${local.version}"
+  source = "github.com/${local.github_owner_catalog}/${local.github_repo_name_catalog}//stacks/aws_gh_actions_auth?ref=${local.version}"
   path   = "github_actions_bootstrap"
   values = {
     version          = local.version
-    github_username  = local.github_username_live
+    github_owner     = local.github_username_live
     github_repo_name = local.github_repo_name_live
     github_token     = local.github_token
     iam_role_name    = "gh-tg-live-eks-role"
@@ -98,13 +98,13 @@ stack "aws_gh_actions_auth" {
 }
 
 unit "aws_caller_identity" {
-  source = "git::git@github.com:${local.github_username_catalog}/${local.github_repo_name_catalog}.git//units/aws_caller_identity/?ref=${local.version}"
+  source = "git::git@github.com:${local.github_owner_catalog}/${local.github_repo_name_catalog}.git//units/aws_caller_identity/?ref=${local.version}"
   path   = "aws_caller_identity"
   values = { version = local.version }
 }
 
 unit "secret_eks_local_admin" {
-  source = "git::git@github.com:${local.github_username_catalog}/${local.github_repo_name_catalog}.git//units/github/secrets/eks_local_admin/?ref=${local.version}"
+  source = "git::git@github.com:${local.github_owner_catalog}/${local.github_repo_name_catalog}.git//units/github/secrets/eks_local_admin/?ref=${local.version}"
   path   = "secret_eks_local_admin"
   values = {
     version          = local.version
