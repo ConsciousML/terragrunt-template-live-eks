@@ -113,7 +113,7 @@ locals {
 # --- VPC + EKS cluster ---
 
 unit "vpc" {
-  source = "github.com/${local.github_owner_catalog}/${local.github_repo_name_catalog}//units/vpc?ref=${local.version_catalog}"
+  source = "github.com/${local.github_owner_catalog}/${local.github_repo_name_catalog}//units/vpc/vpc?ref=${local.version_catalog}"
   path   = "vpc/vpc"
 
   values = {
