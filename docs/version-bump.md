@@ -2,12 +2,6 @@
 
 How to bump the catalog version used by the live stacks and align the live stack files against the catalog pipeline at the new tag.
 
-## Bump `version_catalog`
-
-Bump `version_catalog` in `locals` at the top of both:
-- `live/staging/eks/stack/terragrunt.stack.hcl`
-- `live/prod/eks/stack/terragrunt.stack.hcl`
-
 ## Align `mise.toml`
 
 Diff the catalog's `mise.toml` against live's `mise.toml`. For every tool present in both files, match the catalog's pinned version exactly, since CI and local runs must use the same tool versions the catalog pipeline was built and tested against. A tool that only exists in the catalog's file is module/dev tooling live doesn't need.
@@ -17,6 +11,10 @@ Diff the catalog's `mise.toml` against live's `mise.toml`. For every tool presen
 Diff the catalog's `.env.example` against live's `.env.example`. A new env var here usually pairs with a new `get_env(...)` call added in the bootstrap or stack-file alignment steps below, if that pipeline or unit is adopted, so revisit this diff after those steps if a new entry's purpose isn't clear yet. Cross-check any new entry against the CI/CD secrets documented in [`ci-cd.md`](ci-cd.md) and update both if needed.
 
 Restate each new entry's comment through live's convention (a URL anchor into [`environment-variables.md`](environment-variables.md)) rather than copying the catalog's local-README-reference comment verbatim.
+
+## Bump `version_catalog` in Bootstrap Stack files
+
+Bump the `version` in each bootstrap pipelines in `live/bootstrap/*`
 
 ## Diff the Bootstrap Pipelines
 
@@ -29,6 +27,13 @@ After adopting any changes, run `terragrunt plan` against each affected live boo
 ## Check Shared HCL Files
 
 Check shared HCL files for structural changes, including renames of shared locals, not just additions, since a rename ripples into every stack and bootstrap file reading that file's locals. See the "Catalog Equivalents" section of [`configuration-files.md`](configuration-files.md) for the full catalog-to-live file mapping to diff.
+
+
+## Bump `version_catalog` in Stack Files
+
+Bump `version_catalog` in `locals` at the top of both:
+- `live/staging/eks/stack/terragrunt.stack.hcl`
+- `live/prod/eks/stack/terragrunt.stack.hcl`
 
 ## Align the Stack Files
 
