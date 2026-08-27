@@ -120,8 +120,6 @@ unit "vpc" {
     create_vpc = true
     version    = local.version_vpc
 
-    name = "vpc-eks"
-
     private_subnets = local.private_subnets
     public_subnets  = local.public_subnets
 
@@ -134,6 +132,7 @@ unit "vpc" {
     enable_dns_hostnames = true
     enable_dns_support   = true
 
+    # STAGING: dev disables VPC flow logs to cut cost, staging enables them.
     enable_flow_log                      = true
     create_flow_log_cloudwatch_log_group = true
     create_flow_log_cloudwatch_iam_role  = true
@@ -771,7 +770,7 @@ unit "karpenter_iam" {
   }
 }
 
-unit "karpenter" {
+unit "karpenter_helm" {
   source = "github.com/${local.github_owner_catalog}/${local.github_repo_name_catalog}//units/eks/addons/karpenter/helm?ref=${local.version_catalog}"
   path   = "eks/addons/karpenter/helm"
 
