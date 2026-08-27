@@ -15,7 +15,7 @@
         The repo follows this structure: live/{environment}/{stack}/terragrunt.stack.hcl
 
         For the shared, per-environment, and per-stack HCL files and what each one resolves, see
-        `docs/configuration_files.md`. That doc mirrors `pipelines/dev/README.md` in the catalog
+        `docs/configuration-files.md`. That doc mirrors `pipelines/dev/README.md` in the catalog
         repo. Read the catalog version when you need to know how a file's contents are meant to
         look before environment-specific values are filled in.
 
@@ -56,24 +56,24 @@
 
     <documentation_map>
         - `README.md`: repo overview, prerequisites, deploying a staging EKS cluster end to end
-        - `docs/version_bump.md`: step by step procedure for bumping `version_catalog` and
+        - `docs/version-bump.md`: step by step procedure for bumping `version_catalog` and
           aligning against the catalog at the new tag
-        - `docs/configuration_files.md`: shared, per-environment, and per-stack HCL file
+        - `docs/configuration-files.md`: shared, per-environment, and per-stack HCL file
           inventory and what each one resolves
-        - `docs/new_environment.md`: adding an environment beyond `staging` and `prod` (CIDR,
+        - `docs/new-environment.md`: adding an environment beyond `staging` and `prod` (CIDR,
           Tailscale, DNS bootstrap, stack deploy)
         - `docs/troubleshoot.md`: when stuck on a problem, read this
         - `tests/README.md`: what Terratest covers and how to extend it
-        - `docs/ci_cd.md`: details on CI/CD pipelines
+        - `docs/ci-cd.md`: details on CI/CD pipelines
 
         Catalog docs:
-        - `pipelines/dev/README.md`: source of truth for `docs/configuration_files.md`
+        - `pipelines/dev/README.md`: source of truth for `docs/configuration-files.md`
         - `pipelines/bootstrap/README.md`: source of truth for &lt;bootstrap&gt;'s stack
           inventory
         - `units/eks/README.md`: source of truth for &lt;eks_stack&gt;'s unit inventory at
           `version_catalog`
         - `docs/environment-variables.md`: reference for env vars set in `.env`, cross-check
-          against `docs/version_bump.md`'s environment variable diff step
+          against `docs/version-bump.md`'s environment variable diff step
         - `docs/monitoring.md`: reaching Grafana, Prometheus, and Alertmanager on a deployed
           `staging` or `prod` cluster
     </documentation_map>

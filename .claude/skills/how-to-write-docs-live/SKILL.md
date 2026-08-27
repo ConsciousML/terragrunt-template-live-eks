@@ -11,7 +11,7 @@ here. It applies as written.
 ## Doc Types in This Repo
 
 - **Layer-index** (what a whole directory of things is): `README.md`
-- **Operational guide** (procedural, task-oriented): `docs/ci_cd.md`, `docs/new_environment.md`,
-  `docs/troubleshoot.md`, `docs/version_bump.md`
+- **Operational guide** (procedural, task-oriented): `docs/ci-cd.md`, `docs/new-environment.md`,
+  `docs/troubleshoot.md`, `docs/version-bump.md`
 - **Config inventory** (file-by-file breakdown of what a directory of HCL resolves):
-  `docs/configuration_files.md`
+  `docs/configuration-files.md`

@@ -16,7 +16,7 @@ The required drift is whatever the dev pipeline's own inline comments mark as de
 
 ## Check Shared HCL Files
 
-Check shared HCL files for structural changes. These rarely change. See the "Catalog Equivalents" section of [`configuration_files.md`](configuration_files.md) for the full catalog-to-live file mapping to diff.
+Check shared HCL files for structural changes. These rarely change. See the "Catalog Equivalents" section of [`configuration-files.md`](configuration-files.md) for the full catalog-to-live file mapping to diff.
 
 ## Diff the Bootstrap Pipelines
 
@@ -26,7 +26,7 @@ Look for a new top-level stack in the catalog with no live counterpart, an exist
 
 ## Diff Environment Variables
 
-Diff the catalog's `.env.example` against live's `.env.example`. A new env var here usually pairs with a new `get_env(...)` call in a stack or bootstrap file from the previous two steps. Cross-check any new entry against the CI/CD secrets documented in [`ci_cd.md`](ci_cd.md) and update both if needed.
+Diff the catalog's `.env.example` against live's `.env.example`. A new env var here usually pairs with a new `get_env(...)` call in a stack or bootstrap file from the previous two steps. Cross-check any new entry against the CI/CD secrets documented in [`ci-cd.md`](ci-cd.md) and update both if needed.
 
 ## Align the Docs
 
