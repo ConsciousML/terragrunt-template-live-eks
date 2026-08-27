@@ -192,7 +192,7 @@ terragrunt run --all destroy --non-interactive --no-stack-generate
 ```
 
 ## Extend this Repository
-Follow the [development workflow guide](docs/ci_cd.md#using-the-cicd-development-workflow).
+Follow the [development workflow guide](docs/ci-cd.md#using-the-cicd-development-workflow).
 
 ## CI/CD Pipelines
 
@@ -205,7 +205,7 @@ Follow the [development workflow guide](docs/ci_cd.md#using-the-cicd-development
 ### CD (Merge to main)
 - Automatically deploys to the production environment (i.e `prod`).
 
-See the [CI/CD workflow guide](docs/ci_cd.md) for detailed setup instructions and usage.
+See the [CI/CD workflow guide](docs/ci-cd.md) for detailed setup instructions and usage.
 
 ## Testing
 
@@ -226,7 +226,7 @@ prek run
 
 ## Create a New Environment
 
-See the [new environment guide](docs/new_environment.md) for the full sequence of steps.
+See the [new environment guide](docs/new-environment.md) for the full sequence of steps.
 
 ## License
 
