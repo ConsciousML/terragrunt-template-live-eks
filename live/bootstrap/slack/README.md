@@ -35,7 +35,7 @@ Run `gh_secret` once, it's environment-independent:
 ```bash
 source .env
 cd live/bootstrap/slack/gh_secret
-terragrunt stack run init
+terragrunt stack generate
 terragrunt run --all apply --backend-bootstrap --non-interactive --no-stack-generate
 ```
 
@@ -44,7 +44,7 @@ Repeat the following for each environment (replacing `<environment>` by `staging
 ```bash
 source .env
 cd live/bootstrap/slack/channels/<environment>/stack
-terragrunt stack run init
+terragrunt stack generate
 terragrunt run --all apply --backend-bootstrap --non-interactive --no-stack-generate
 ```
 

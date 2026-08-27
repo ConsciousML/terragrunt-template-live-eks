@@ -126,7 +126,7 @@ Deploy the [EKS Cluster Stack](https://github.com/ConsciousML/terragrunt-templat
 ```bash
 source .env
 cd live/staging/eks/stack
-terragrunt stack run init
+terragrunt stack generate
 terragrunt run --all apply --backend-bootstrap --non-interactive --no-stack-generate
 ```
 

@@ -118,7 +118,7 @@ jobs:
           EKS_LOCAL_ADMIN_ARN: ${{ secrets.EKS_LOCAL_ADMIN_ARN }}
         run: |
           cd live/prod
-          terragrunt stack run init
+          terragrunt stack generate
           terragrunt run --all apply --backend-bootstrap --non-interactive --no-stack-generate
 
   revoke-oauth:
