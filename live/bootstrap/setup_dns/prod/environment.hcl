@@ -1,3 +1,4 @@
 locals {
-  environment = "prod"
+  environment       = "prod"
+  environment_alias = local.environment
 }
