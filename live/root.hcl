@@ -5,11 +5,12 @@ locals {
   # Load environment related variables (dev, staging, prod, ...)
   environment_vars = read_terragrunt_config(find_in_parent_folders("environment.hcl"))
 
-  aws_region  = local.region_vars.locals.region
-  environment = local.environment_vars.locals.environment
+  aws_region        = local.region_vars.locals.region
+  environment       = local.environment_vars.locals.environment
+  environment_alias = local.environment_vars.locals.environment_alias
 
   github_locals                = read_terragrunt_config(find_in_parent_folders("github.hcl")).locals
-  github_username_catalog      = local.github_locals.github_username_catalog
+  github_owner_catalog         = local.github_locals.github_owner_catalog
   github_repo_name_catalog     = local.github_locals.github_repo_name_catalog
   github_repo_name_app_of_apps = local.github_locals.github_repo_name_app_of_apps
 }
@@ -26,7 +27,7 @@ remote_state {
 
     # The bucket name is suffixed using the env name (i.e `dev`, `staging`, ect.)
     # This allows to completely isolate states between environments
-    bucket = "tofu-state-${get_aws_account_id()}-${local.environment}"
+    bucket = "tofu-state-${get_aws_account_id()}-${local.aws_region}-${local.environment}"
 
     # The state file path within the bucket, based on module's relative path to ensure each module has its own isolated state
     key            = "${path_relative_to_include()}/tofu.tfstate"
@@ -46,7 +47,7 @@ EOF
 
 catalog {
   urls = [
-    "https://github.com/${local.github_username_catalog}/${local.github_repo_name_catalog}"
+    "https://github.com/${local.github_owner_catalog}/${local.github_repo_name_catalog}"
   ]
 }
 
