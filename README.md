@@ -59,7 +59,7 @@ If you've forked both repositories, `github_username_catalog` and `github_userna
 
 3. Set `TAILSCALE_OAUTH_CLIENT_ID` and `TAILSCALE_OAUTH_CLIENT_SECRET` in your `.env` (see the [environment variables guide](docs/environment-variables.md))
 
-4. Karpenter's NodePool is capped at 10 vCPUs by default and provisions `spot` instances. Raise `spec.limits.cpu` or switch `karpenter.sh/capacity-type` to `on-demand` in the [staging](live/staging/eks/stack/terragrunt.stack.hcl) and [prod](live/prod/eks/stack/terragrunt.stack.hcl) EKS stacks for production stability.
+4. Karpenter's `elastic` NodePool provisions `spot` instances and is capped by default. Raise `limits_cpu` or switch `karpenter.sh/capacity-type` to `on-demand` in the [staging](live/staging/eks/stack/terragrunt.stack.hcl) and [prod](live/prod/eks/stack/terragrunt.stack.hcl) EKS stacks for production stability.
 
 ### Installation
 
@@ -72,7 +72,7 @@ Next, install mise:
 curl https://mise.run | MISE_VERSION=v2026.4.0 sh
 ```
 
-Then, install all the tools in the `mise.toml` file:
+Then, install all the tools in the `mise.toml` and `mise.local.toml` files:
 ```bash
 mise trust
 mise install
@@ -94,11 +94,14 @@ For more information on how to use mise, read their [getting started guide](http
 - [Terragrunt](https://terragrunt.gruntwork.io/docs/getting-started/install/)
 - [OpenTofu](https://opentofu.org/docs/intro/install/) (or [Terraform](https://developer.hashicorp.com/terraform/install))
 - [Go](https://go.dev/doc/install)
-- [Python 3.13.1](https://www.python.org/downloads/)
 - [GitHub CLI](https://github.com/cli/cli#installation)
 - [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
+- [prek](https://github.com/j178/prek)
+- [kubectl](https://kubernetes.io/docs/tasks/tools/#kubectl)
+- [jq](https://jqlang.org/download/)
+- [ArgoCD CLI](https://argo-cd.readthedocs.io/en/stable/cli_installation/)
 
-See [mise.toml](./mise.toml) for specific versions.
+See [mise.toml](./mise.toml) and [mise.local.toml](./mise.local.toml) for specific versions.
 
 ### Authenticate with AWS
 Authenticate to the AWS CLI:
@@ -177,9 +180,11 @@ argocd login argocd.private.staging.<base_domain> \
     --output text | jq -r .plaintext)
 ```
 
-### Access the Guestbook App
+### Access the Podinfo App
 
-Open `https://guestbook.public.staging.<base_domain>` in your browser. No login required.
+Open `https://podinfo.public.staging.<base_domain>` in your browser. No login required.
+
+See [Accessing the UIs](https://github.com/ConsciousML/terragrunt-template-catalog-eks/blob/main/docs/monitoring.md#accessing-the-uis) for the other cluster UIs (Grafana, Prometheus, Alertmanager, Hubble).
 
 Apps are deployed using the [App of Apps](https://github.com/ConsciousML/argocd-app-of-apps-template) pattern: a single ArgoCD Application bootstraps all child apps from that repository.
 
