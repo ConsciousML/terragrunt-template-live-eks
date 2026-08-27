@@ -1,5 +1,5 @@
 locals {
-  version_catalog            = "v0.0.13"
+  version_catalog            = "v0.1.2"
   version_vpc                = "6.6.0"
   version_cluster            = "21.15.1"
   version_aws_lbc            = "3.2.1"
@@ -11,7 +11,7 @@ locals {
   version_karpenter_helm     = "1.13.0"
 
   github_locals            = read_terragrunt_config(find_in_parent_folders("github.hcl")).locals
-  github_username_catalog  = local.github_locals.github_username_catalog
+  github_owner_catalog     = local.github_locals.github_owner_catalog
   github_repo_name_catalog = local.github_locals.github_repo_name_catalog
 
   environment       = read_terragrunt_config(find_in_parent_folders("environment.hcl")).locals.environment
@@ -24,7 +24,7 @@ locals {
 }
 
 unit "route53_hosted_zone_public" {
-  source = "github.com/${local.github_username_catalog}/${local.github_repo_name_catalog}//units/eks/route53/hosted_zone_public?ref=${local.version_catalog}"
+  source = "github.com/${local.github_owner_catalog}/${local.github_repo_name_catalog}//units/eks/route53/hosted_zone_public?ref=${local.version_catalog}"
   path   = "eks/route53/hosted_zone_public"
 
   values = {
@@ -35,7 +35,7 @@ unit "route53_hosted_zone_public" {
 }
 
 unit "vpc" {
-  source = "github.com/${local.github_username_catalog}/${local.github_repo_name_catalog}//units/vpc?ref=${local.version_catalog}"
+  source = "github.com/${local.github_owner_catalog}/${local.github_repo_name_catalog}//units/vpc?ref=${local.version_catalog}"
   path   = "vpc"
 
   values = {
@@ -66,7 +66,7 @@ unit "vpc" {
 }
 
 unit "cluster" {
-  source = "github.com/${local.github_username_catalog}/${local.github_repo_name_catalog}//units/eks/cluster?ref=${local.version_catalog}"
+  source = "github.com/${local.github_owner_catalog}/${local.github_repo_name_catalog}//units/eks/cluster?ref=${local.version_catalog}"
   path   = "eks/cluster"
 
   values = {
@@ -115,7 +115,7 @@ unit "cluster" {
 }
 
 unit "karpenter_iam" {
-  source = "github.com/${local.github_username_catalog}/${local.github_repo_name_catalog}//units/eks/addons/karpenter/iam?ref=${local.version_catalog}"
+  source = "github.com/${local.github_owner_catalog}/${local.github_repo_name_catalog}//units/eks/addons/karpenter/iam?ref=${local.version_catalog}"
   path   = "eks/addons/karpenter/iam"
 
   values = {
@@ -126,7 +126,7 @@ unit "karpenter_iam" {
 }
 
 unit "karpenter" {
-  source = "github.com/${local.github_username_catalog}/${local.github_repo_name_catalog}//units/eks/addons/karpenter/helm?ref=${local.version_catalog}"
+  source = "github.com/${local.github_owner_catalog}/${local.github_repo_name_catalog}//units/eks/addons/karpenter/helm?ref=${local.version_catalog}"
   path   = "eks/addons/karpenter/helm"
 
   values = {
@@ -153,7 +153,7 @@ unit "karpenter" {
 }
 
 unit "karpenter_ec2_node_class" {
-  source = "github.com/${local.github_username_catalog}/${local.github_repo_name_catalog}//units/eks/addons/karpenter/ec2_node_class?ref=${local.version_catalog}"
+  source = "github.com/${local.github_owner_catalog}/${local.github_repo_name_catalog}//units/eks/addons/karpenter/ec2_node_class?ref=${local.version_catalog}"
   path   = "eks/addons/karpenter/ec2_node_class"
 
   values = {
@@ -164,7 +164,7 @@ unit "karpenter_ec2_node_class" {
 }
 
 unit "karpenter_node_pool" {
-  source = "github.com/${local.github_username_catalog}/${local.github_repo_name_catalog}//units/eks/addons/karpenter/node_pool?ref=${local.version_catalog}"
+  source = "github.com/${local.github_owner_catalog}/${local.github_repo_name_catalog}//units/eks/addons/karpenter/node_pool?ref=${local.version_catalog}"
   path   = "eks/addons/karpenter/node_pool"
 
   values = {
@@ -194,7 +194,7 @@ unit "karpenter_node_pool" {
 }
 
 unit "iam_policy_aws_lbc" {
-  source = "github.com/${local.github_username_catalog}/${local.github_repo_name_catalog}//units/eks/addons/aws_load_balancer_controller/iam_policy_url?ref=${local.version_catalog}"
+  source = "github.com/${local.github_owner_catalog}/${local.github_repo_name_catalog}//units/eks/addons/aws_load_balancer_controller/iam_policy_url?ref=${local.version_catalog}"
   path   = "eks/addons/aws_load_balancer_controller/iam_policy_url"
 
   values = {
@@ -204,7 +204,7 @@ unit "iam_policy_aws_lbc" {
 }
 
 unit "iam_role_aws_lbc" {
-  source = "github.com/${local.github_username_catalog}/${local.github_repo_name_catalog}//units/eks/addons/aws_load_balancer_controller/iam_role?ref=${local.version_catalog}"
+  source = "github.com/${local.github_owner_catalog}/${local.github_repo_name_catalog}//units/eks/addons/aws_load_balancer_controller/iam_role?ref=${local.version_catalog}"
   path   = "eks/addons/aws_load_balancer_controller/iam_role"
 
   values = {
@@ -214,7 +214,7 @@ unit "iam_role_aws_lbc" {
 }
 
 unit "aws_load_balancer_controller" {
-  source = "github.com/${local.github_username_catalog}/${local.github_repo_name_catalog}//units/eks/addons/aws_load_balancer_controller/helm?ref=${local.version_catalog}"
+  source = "github.com/${local.github_owner_catalog}/${local.github_repo_name_catalog}//units/eks/addons/aws_load_balancer_controller/helm?ref=${local.version_catalog}"
   path   = "eks/addons/aws_load_balancer_controller/helm"
 
   values = {
@@ -225,7 +225,7 @@ unit "aws_load_balancer_controller" {
 }
 
 unit "argocd_password" {
-  source = "github.com/${local.github_username_catalog}/${local.github_repo_name_catalog}//units/eks/addons/argocd/aws_password_secret?ref=${local.version_catalog}"
+  source = "github.com/${local.github_owner_catalog}/${local.github_repo_name_catalog}//units/eks/addons/argocd/aws_password_secret?ref=${local.version_catalog}"
   path   = "eks/addons/argocd/aws_password_secret"
 
   values = {
@@ -237,7 +237,7 @@ unit "argocd_password" {
 }
 
 unit "argocd" {
-  source = "github.com/${local.github_username_catalog}/${local.github_repo_name_catalog}//units/eks/addons/argocd/helm?ref=${local.version_catalog}"
+  source = "github.com/${local.github_owner_catalog}/${local.github_repo_name_catalog}//units/eks/addons/argocd/helm?ref=${local.version_catalog}"
   path   = "eks/addons/argocd/helm"
 
   values = {
@@ -273,7 +273,7 @@ unit "argocd" {
 }
 
 unit "route53_hosted_zone_private" {
-  source = "github.com/${local.github_username_catalog}/${local.github_repo_name_catalog}//units/eks/route53/hosted_zone_private?ref=${local.version_catalog}"
+  source = "github.com/${local.github_owner_catalog}/${local.github_repo_name_catalog}//units/eks/route53/hosted_zone_private?ref=${local.version_catalog}"
   path   = "eks/route53/hosted_zone_private"
 
   values = {
@@ -283,7 +283,7 @@ unit "route53_hosted_zone_private" {
 }
 
 unit "gateway_api_crds" {
-  source = "github.com/${local.github_username_catalog}/${local.github_repo_name_catalog}//units/eks/addons/kubectl_manifest_from_url?ref=${local.version_catalog}"
+  source = "github.com/${local.github_owner_catalog}/${local.github_repo_name_catalog}//units/eks/addons/kubectl_manifest_from_url?ref=${local.version_catalog}"
   path   = "eks/addons/gateway_api/crds"
 
   values = {
@@ -293,7 +293,7 @@ unit "gateway_api_crds" {
 }
 
 unit "aws_lbc_gateway_api_crds" {
-  source = "github.com/${local.github_username_catalog}/${local.github_repo_name_catalog}//units/eks/addons/kubectl_manifest_from_url?ref=${local.version_catalog}"
+  source = "github.com/${local.github_owner_catalog}/${local.github_repo_name_catalog}//units/eks/addons/kubectl_manifest_from_url?ref=${local.version_catalog}"
   path   = "eks/addons/aws_load_balancer_controller/gateway_api_crds"
 
   values = {
@@ -303,7 +303,7 @@ unit "aws_lbc_gateway_api_crds" {
 }
 
 unit "gateway_api_namespace" {
-  source = "github.com/${local.github_username_catalog}/${local.github_repo_name_catalog}//units/eks/addons/gateway_api/namespace?ref=${local.version_catalog}"
+  source = "github.com/${local.github_owner_catalog}/${local.github_repo_name_catalog}//units/eks/addons/gateway_api/namespace?ref=${local.version_catalog}"
   path   = "eks/addons/gateway_api/namespace"
 
   values = {
@@ -312,7 +312,7 @@ unit "gateway_api_namespace" {
 }
 
 unit "gateway_api_gateway_class" {
-  source = "github.com/${local.github_username_catalog}/${local.github_repo_name_catalog}//units/eks/addons/gateway_api/gateway_class?ref=${local.version_catalog}"
+  source = "github.com/${local.github_owner_catalog}/${local.github_repo_name_catalog}//units/eks/addons/gateway_api/gateway_class?ref=${local.version_catalog}"
   path   = "eks/addons/gateway_api/gateway_class"
 
   values = {
@@ -321,7 +321,7 @@ unit "gateway_api_gateway_class" {
 }
 
 unit "gateway_api_target_group_configuration_public" {
-  source = "github.com/${local.github_username_catalog}/${local.github_repo_name_catalog}//units/eks/addons/gateway_api/target_group_configuration/public?ref=${local.version_catalog}"
+  source = "github.com/${local.github_owner_catalog}/${local.github_repo_name_catalog}//units/eks/addons/gateway_api/target_group_configuration/public?ref=${local.version_catalog}"
   path   = "eks/addons/gateway_api/target_group_configuration/public"
 
   values = {
@@ -330,7 +330,7 @@ unit "gateway_api_target_group_configuration_public" {
 }
 
 unit "gateway_api_load_balancer_configuration_public" {
-  source = "github.com/${local.github_username_catalog}/${local.github_repo_name_catalog}//units/eks/addons/gateway_api/load_balancer_configuration/public?ref=${local.version_catalog}"
+  source = "github.com/${local.github_owner_catalog}/${local.github_repo_name_catalog}//units/eks/addons/gateway_api/load_balancer_configuration/public?ref=${local.version_catalog}"
   path   = "eks/addons/gateway_api/load_balancer_configuration/public"
 
   values = {
@@ -339,7 +339,7 @@ unit "gateway_api_load_balancer_configuration_public" {
 }
 
 unit "gateway_api_gateway_public" {
-  source = "github.com/${local.github_username_catalog}/${local.github_repo_name_catalog}//units/eks/addons/gateway_api/gateway/public?ref=${local.version_catalog}"
+  source = "github.com/${local.github_owner_catalog}/${local.github_repo_name_catalog}//units/eks/addons/gateway_api/gateway/public?ref=${local.version_catalog}"
   path   = "eks/addons/gateway_api/gateway/public"
 
   values = {
@@ -348,7 +348,7 @@ unit "gateway_api_gateway_public" {
 }
 
 unit "iam_role_external_dns_private" {
-  source = "github.com/${local.github_username_catalog}/${local.github_repo_name_catalog}//units/eks/addons/external_dns/private/iam_role?ref=${local.version_catalog}"
+  source = "github.com/${local.github_owner_catalog}/${local.github_repo_name_catalog}//units/eks/addons/external_dns/private/iam_role?ref=${local.version_catalog}"
   path   = "eks/addons/external_dns/private/iam_role"
 
   values = {
@@ -358,7 +358,7 @@ unit "iam_role_external_dns_private" {
 }
 
 unit "external_dns_private" {
-  source = "github.com/${local.github_username_catalog}/${local.github_repo_name_catalog}//units/eks/addons/external_dns/private/helm?ref=${local.version_catalog}"
+  source = "github.com/${local.github_owner_catalog}/${local.github_repo_name_catalog}//units/eks/addons/external_dns/private/helm?ref=${local.version_catalog}"
   path   = "eks/addons/external_dns/private/helm"
 
   values = {
@@ -381,7 +381,7 @@ unit "external_dns_private" {
 }
 
 unit "iam_role_external_dns_public" {
-  source = "github.com/${local.github_username_catalog}/${local.github_repo_name_catalog}//units/eks/addons/external_dns/public/iam_role?ref=${local.version_catalog}"
+  source = "github.com/${local.github_owner_catalog}/${local.github_repo_name_catalog}//units/eks/addons/external_dns/public/iam_role?ref=${local.version_catalog}"
   path   = "eks/addons/external_dns/public/iam_role"
 
   values = {
@@ -391,7 +391,7 @@ unit "iam_role_external_dns_public" {
 }
 
 unit "external_dns_public" {
-  source = "github.com/${local.github_username_catalog}/${local.github_repo_name_catalog}//units/eks/addons/external_dns/public/helm?ref=${local.version_catalog}"
+  source = "github.com/${local.github_owner_catalog}/${local.github_repo_name_catalog}//units/eks/addons/external_dns/public/helm?ref=${local.version_catalog}"
   path   = "eks/addons/external_dns/public/helm"
 
   values = {
@@ -414,7 +414,7 @@ unit "external_dns_public" {
 }
 
 unit "acm_certificate" {
-  source = "github.com/${local.github_username_catalog}/${local.github_repo_name_catalog}//units/eks/route53/acm_certificate?ref=${local.version_catalog}"
+  source = "github.com/${local.github_owner_catalog}/${local.github_repo_name_catalog}//units/eks/route53/acm_certificate?ref=${local.version_catalog}"
   path   = "eks/route53/acm_certificate"
 
   values = {
@@ -423,7 +423,7 @@ unit "acm_certificate" {
 }
 
 unit "iam_role_eso" {
-  source = "github.com/${local.github_username_catalog}/${local.github_repo_name_catalog}//units/eks/addons/external_secrets_operator/iam_role?ref=${local.version_catalog}"
+  source = "github.com/${local.github_owner_catalog}/${local.github_repo_name_catalog}//units/eks/addons/external_secrets_operator/iam_role?ref=${local.version_catalog}"
   path   = "eks/addons/external_secrets_operator/iam_role"
 
   values = {
@@ -433,7 +433,7 @@ unit "iam_role_eso" {
 }
 
 unit "external_secrets_operator" {
-  source = "github.com/${local.github_username_catalog}/${local.github_repo_name_catalog}//units/eks/addons/external_secrets_operator/helm?ref=${local.version_catalog}"
+  source = "github.com/${local.github_owner_catalog}/${local.github_repo_name_catalog}//units/eks/addons/external_secrets_operator/helm?ref=${local.version_catalog}"
   path   = "eks/addons/external_secrets_operator/helm"
 
   values = {
@@ -444,7 +444,7 @@ unit "external_secrets_operator" {
 }
 
 unit "argocd_aws_secret_store" {
-  source = "github.com/${local.github_username_catalog}/${local.github_repo_name_catalog}//units/eks/addons/argocd/aws_secret_store?ref=${local.version_catalog}"
+  source = "github.com/${local.github_owner_catalog}/${local.github_repo_name_catalog}//units/eks/addons/argocd/aws_secret_store?ref=${local.version_catalog}"
   path   = "eks/addons/argocd/aws_secret_store"
 
   values = {
@@ -453,7 +453,7 @@ unit "argocd_aws_secret_store" {
 }
 
 unit "argocd_aws_external_secret" {
-  source = "github.com/${local.github_username_catalog}/${local.github_repo_name_catalog}//units/eks/addons/argocd/aws_external_secret?ref=${local.version_catalog}"
+  source = "github.com/${local.github_owner_catalog}/${local.github_repo_name_catalog}//units/eks/addons/argocd/aws_external_secret?ref=${local.version_catalog}"
   path   = "eks/addons/argocd/aws_external_secret"
 
   values = {
@@ -462,7 +462,7 @@ unit "argocd_aws_external_secret" {
 }
 
 unit "tailscale_oauth_client_tailscale_operator" {
-  source = "github.com/${local.github_username_catalog}/${local.github_repo_name_catalog}//units/eks/addons/tailscale/oauth_client_tailscale_operator?ref=${local.version_catalog}"
+  source = "github.com/${local.github_owner_catalog}/${local.github_repo_name_catalog}//units/eks/addons/tailscale/oauth_client_tailscale_operator?ref=${local.version_catalog}"
   path   = "eks/addons/tailscale/oauth_client_tailscale_operator"
 
   values = {
@@ -471,7 +471,7 @@ unit "tailscale_oauth_client_tailscale_operator" {
 }
 
 unit "tailscale_operator" {
-  source = "github.com/${local.github_username_catalog}/${local.github_repo_name_catalog}//units/eks/addons/tailscale/operator?ref=${local.version_catalog}"
+  source = "github.com/${local.github_owner_catalog}/${local.github_repo_name_catalog}//units/eks/addons/tailscale/operator?ref=${local.version_catalog}"
   path   = "eks/addons/tailscale/operator"
 
   values = {
@@ -481,7 +481,7 @@ unit "tailscale_operator" {
 }
 
 unit "tailscale_connector" {
-  source = "github.com/${local.github_username_catalog}/${local.github_repo_name_catalog}//units/eks/addons/tailscale/connector?ref=${local.version_catalog}"
+  source = "github.com/${local.github_owner_catalog}/${local.github_repo_name_catalog}//units/eks/addons/tailscale/connector?ref=${local.version_catalog}"
   path   = "eks/addons/tailscale/connector"
 
   values = {
@@ -490,7 +490,7 @@ unit "tailscale_connector" {
 }
 
 unit "tailscale_split_dns" {
-  source = "github.com/${local.github_username_catalog}/${local.github_repo_name_catalog}//units/eks/addons/tailscale/split_dns?ref=${local.version_catalog}"
+  source = "github.com/${local.github_owner_catalog}/${local.github_repo_name_catalog}//units/eks/addons/tailscale/split_dns?ref=${local.version_catalog}"
   path   = "eks/addons/tailscale/split_dns"
 
   values = {
@@ -499,7 +499,7 @@ unit "tailscale_split_dns" {
 }
 
 unit "argocd_app_of_apps" {
-  source = "github.com/${local.github_username_catalog}/${local.github_repo_name_catalog}//units/eks/addons/argocd/app_of_apps?ref=${local.version_catalog}"
+  source = "github.com/${local.github_owner_catalog}/${local.github_repo_name_catalog}//units/eks/addons/argocd/app_of_apps?ref=${local.version_catalog}"
   path   = "eks/addons/argocd/app_of_apps"
 
   values = {
@@ -518,7 +518,7 @@ unit "argocd_app_of_apps" {
 }
 
 unit "domain_name_argocd" {
-  source = "github.com/${local.github_username_catalog}/${local.github_repo_name_catalog}//units/eks/domain_name/argocd?ref=${local.version_catalog}"
+  source = "github.com/${local.github_owner_catalog}/${local.github_repo_name_catalog}//units/eks/domain_name/argocd?ref=${local.version_catalog}"
   path   = "eks/domain_name/argocd"
 
   values = {
@@ -527,7 +527,7 @@ unit "domain_name_argocd" {
 }
 
 unit "domain_name_guestbook" {
-  source = "github.com/${local.github_username_catalog}/${local.github_repo_name_catalog}//units/eks/domain_name/guestbook?ref=${local.version_catalog}"
+  source = "github.com/${local.github_owner_catalog}/${local.github_repo_name_catalog}//units/eks/domain_name/guestbook?ref=${local.version_catalog}"
   path   = "eks/domain_name/guestbook"
 
   values = {
