@@ -160,6 +160,10 @@ unit "vpc" {
 unit "vpc_endpoint_cidrs" {
   source = "github.com/${local.github_owner_catalog}/${local.github_repo_name_catalog}//units/vpc/endpoint_cidrs?ref=${local.version_catalog}"
   path   = "vpc/endpoint_cidrs"
+
+  values = {
+    version = local.version_catalog
+  }
 }
 
 unit "vpc_endpoints" {
@@ -167,7 +171,6 @@ unit "vpc_endpoints" {
   path   = "vpc/endpoints"
 
   values = {
-    # Same source repo as the vpc unit (terraform-aws-modules/vpc), reuse its version pin.
     version = local.version_vpc
   }
 }
