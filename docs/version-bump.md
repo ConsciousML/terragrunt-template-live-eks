@@ -2,6 +2,8 @@
 
 How to bump the catalog version used by the live stacks and align the live stack files against the catalog pipeline at the new tag.
 
+Do each section below in order, top to bottom. Finish one section's changes before starting the next, don't jump ahead.
+
 ## Align `mise.toml`
 
 Diff the catalog's `mise.toml` against live's `mise.toml`. For every tool present in both files, match the catalog's pinned version exactly, since CI and local runs must use the same tool versions the catalog pipeline was built and tested against. A tool that only exists in the catalog's file is module/dev tooling live doesn't need.
@@ -21,6 +23,8 @@ Bump the `version` in each bootstrap pipelines in `live/bootstrap/*`
 Ask the user whether bootstrap should be checked this bump, it isn't applied by CI/CD, so a missed change won't break a build, but it drifts silently, and not every bump needs it.
 
 If yes, diff `pipelines/bootstrap/` against `live/bootstrap/`. Look for a new top-level stack in the catalog with no live counterpart, an existing bootstrap stack restructured, and renamed units inside an existing stack. Decide per stack whether live should adopt it.
+
+Never miss a bootstrap stack that's new in the catalog since the last bump. For each one, check the catalog's own README for that stack before deciding: some bootstrap pipelines are explicitly dev-only or CI-only and state so, and shouldn't be adopted into live.
 
 After adopting any changes, run `terragrunt plan` against each affected live bootstrap stack to confirm whether an apply is actually needed. Don't assume the structural diff alone tells you the live state has drifted.
 
