@@ -39,7 +39,7 @@ source .env
 
 Deploy and test the full stack (apply + assert + destroy):
 ```bash
-go test -v -run TestStack ./tests/... -timeout 90m
+go test -v -run TestStack ./tests/... -timeout 120m
 ```
 
 Assert only against an already-deployed stack (no apply or destroy):
