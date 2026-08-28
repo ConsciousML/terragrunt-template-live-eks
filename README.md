@@ -119,10 +119,7 @@ aws configure
 For more information, read the [AWS CLI authentication documentation](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html).
 
 ### Run the Bootstrap Pipelines
-Run the following once before using CI/CD:
-- [AWS GitHub Actions Auth](live/bootstrap/aws_gh_actions_auth/README.md): authenticates GitHub Actions with AWS
-- [Setup DNS](live/bootstrap/setup_dns/README.md): creates one public [Route53 hosted zone](https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/hosted-zones-working-with.html) per environment, shared by all apps, delegated once at your registrar
-- [Tailscale](live/bootstrap/tailscale/README.md): creates [Tailscale](https://tailscale.com/) resources needed for CI and to access internal cluster tools (ArgoCD, etc.)
+Run the [bootstrap pipelines](live/bootstrap/README.md) once, required before anything else in this repo.
 
 Also run the following once per AWS account:
 ```bash
