@@ -18,9 +18,12 @@ import (
 
 // endpointRetries and endpointSleep bound how long each endpoint check waits for its tool to
 // become reachable. Budgeted at 25m to clear app-of-apps sync after apply, which can take ~20m.
+// reconnectEveryRetries cycles the Tailscale connection again after this many failed attempts,
+// in case the split-DNS route or connection went stale mid-poll.
 const (
-	endpointRetries = 50
-	endpointSleep   = 30 * time.Second
+	endpointRetries       = 50
+	endpointSleep         = 30 * time.Second
+	reconnectEveryRetries = 10
 )
 
 // endpointCheck describes one stack tool to verify after deploy. Entries with no secretUnit are
@@ -109,6 +112,39 @@ func TestStackExists(t *testing.T) {
 	assertStack(t, ctx, stackDir, region)
 }
 
+// pollUntilReady polls url until validate passes, sleeping sleepBetweenRetries between attempts
+// up to retries times. Every reconnectEveryRetries failed attempts it cycles Tailscale again,
+// covering the case where the split-DNS route or connection went stale mid-poll.
+func pollUntilReady(t *testing.T, url string, retries int, sleepBetweenRetries time.Duration, validate func(int, string) bool) {
+	t.Helper()
+
+	for attempt := 1; attempt <= retries+1; attempt++ {
+		status, body, err := http_helper.HttpGetE(t, url, nil)
+		if err == nil && validate(status, body) {
+			return
+		}
+
+		if err != nil {
+			t.Logf("poll %s attempt %d/%d failed: %v", url, attempt, retries+1, err)
+		} else {
+			t.Logf("poll %s attempt %d/%d failed: unexpected status %d", url, attempt, retries+1, status)
+		}
+
+		if attempt > retries {
+			break
+		}
+
+		if attempt%reconnectEveryRetries == 0 {
+			t.Logf("%s still unreachable after %d attempts, reconnecting tailscale", url, attempt)
+			reconnectTailscale(t)
+		}
+
+		time.Sleep(sleepBetweenRetries)
+	}
+
+	t.Fatalf("%s did not become ready after %d retries", url, retries)
+}
+
 // assertStack fetches stack outputs and runs every check in endpointChecks.
 // It discards the Terragrunt logger to avoid printing sensitive output values.
 func assertStack(t *testing.T, ctx context.Context, stackDir string, region string) {
@@ -127,7 +163,7 @@ func assertStack(t *testing.T, ctx context.Context, stackDir string, region stri
 		if ep.secretUnit == "" {
 			url := "https://" + host + ep.path
 			t.Logf("polling %s until %s is ready", url, ep.name)
-			http_helper.HttpGetWithRetryWithCustomValidation(t, url, nil, endpointRetries, endpointSleep, ep.validate)
+			pollUntilReady(t, url, endpointRetries, endpointSleep, ep.validate)
 			t.Logf("%s is healthy", ep.name)
 			continue
 		}
@@ -169,7 +205,7 @@ func testArgoCDLogin(t *testing.T, host string, password string) {
 	t.Helper()
 
 	t.Logf("polling https://%s/healthz until ArgoCD is ready", host)
-	http_helper.HttpGetWithRetryWithCustomValidation(t, "https://"+host+"/healthz", nil, endpointRetries, endpointSleep, statusOK)
+	pollUntilReady(t, "https://"+host+"/healthz", endpointRetries, endpointSleep, statusOK)
 	t.Log("ArgoCD is healthy")
 
 	t.Logf("logging in to ArgoCD at https://%s/api/v1/session", host)
@@ -190,7 +226,7 @@ func testGrafanaLogin(t *testing.T, host string, password string) {
 	t.Helper()
 
 	t.Logf("polling https://%s/api/health until Grafana is ready", host)
-	http_helper.HttpGetWithRetryWithCustomValidation(t, "https://"+host+"/api/health", nil, endpointRetries, endpointSleep, statusOK)
+	pollUntilReady(t, "https://"+host+"/api/health", endpointRetries, endpointSleep, statusOK)
 	t.Log("Grafana is healthy")
 
 	t.Logf("logging in to Grafana at https://%s/login", host)
