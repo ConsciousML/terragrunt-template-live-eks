@@ -1,8 +1,10 @@
 package tests
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"net/http"
 	"testing"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -43,4 +45,20 @@ func fetchAWSSecret(t *testing.T, ctx context.Context, region string, secretName
 	require.NoError(t, json.Unmarshal([]byte(*secret.SecretString), &secretData), "failed to unmarshal secret JSON for %q", secretName)
 	require.NotEmpty(t, secretData.Plaintext, "plaintext field is empty in secret %q", secretName)
 	return secretData.Plaintext
+}
+
+// postLoginJSON POSTs a JSON-encoded request body to url and decodes the JSON response into out.
+// It fails the test on a marshal/request/decode error or a non-200 status.
+func postLoginJSON(t *testing.T, url string, reqBody any, out any) {
+	t.Helper()
+
+	body, err := json.Marshal(reqBody)
+	require.NoError(t, err, "failed to marshal request body for %s", url)
+
+	resp, err := http.Post(url, "application/json", bytes.NewReader(body))
+	require.NoError(t, err, "POST %s failed", url)
+	defer resp.Body.Close()
+
+	require.Equal(t, http.StatusOK, resp.StatusCode, "login to %s returned unexpected status: got %d, want 200", url, resp.StatusCode)
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(out), "failed to decode login response from %s", url)
 }

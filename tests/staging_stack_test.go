@@ -1,9 +1,7 @@
 package tests
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"net/http"
 	"os"
 	"os/exec"
@@ -176,22 +174,13 @@ func testArgoCDLogin(t *testing.T, host string, password string) {
 	t.Log("ArgoCD is healthy")
 
 	t.Logf("logging in to ArgoCD at https://%s/api/v1/session", host)
-	body, err := json.Marshal(map[string]string{
-		"username": "admin",
-		"password": password,
-	})
-	require.NoError(t, err, "failed to marshal ArgoCD login request body")
-
-	resp, err := http.Post("https://"+host+"/api/v1/session", "application/json", bytes.NewReader(body))
-	require.NoError(t, err, "POST https://%s/api/v1/session failed", host)
-	defer resp.Body.Close()
-
-	require.Equal(t, http.StatusOK, resp.StatusCode, "ArgoCD login returned unexpected status: got %d, want 200", resp.StatusCode)
-
 	var session struct {
 		Token string `json:"token"`
 	}
-	require.NoError(t, json.NewDecoder(resp.Body).Decode(&session), "failed to decode ArgoCD session response")
+	postLoginJSON(t, "https://"+host+"/api/v1/session", map[string]string{
+		"username": "admin",
+		"password": password,
+	}, &session)
 	assert.NotEmpty(t, session.Token, "ArgoCD session token is empty — login may have succeeded but returned no token")
 	t.Log("ArgoCD login succeeded and session token received")
 }
@@ -206,22 +195,13 @@ func testGrafanaLogin(t *testing.T, host string, password string) {
 	t.Log("Grafana is healthy")
 
 	t.Logf("logging in to Grafana at https://%s/login", host)
-	body, err := json.Marshal(map[string]string{
-		"user":     "admin",
-		"password": password,
-	})
-	require.NoError(t, err, "failed to marshal Grafana login request body")
-
-	resp, err := http.Post("https://"+host+"/login", "application/json", bytes.NewReader(body))
-	require.NoError(t, err, "POST https://%s/login failed", host)
-	defer resp.Body.Close()
-
-	require.Equal(t, http.StatusOK, resp.StatusCode, "Grafana login returned unexpected status: got %d, want 200", resp.StatusCode)
-
 	var loginResponse struct {
 		Message string `json:"message"`
 	}
-	require.NoError(t, json.NewDecoder(resp.Body).Decode(&loginResponse), "failed to decode Grafana login response")
+	postLoginJSON(t, "https://"+host+"/login", map[string]string{
+		"user":     "admin",
+		"password": password,
+	}, &loginResponse)
 	assert.NotEmpty(t, loginResponse.Message, "Grafana login response message is empty — login may have failed")
 	t.Log("Grafana login succeeded")
 }
