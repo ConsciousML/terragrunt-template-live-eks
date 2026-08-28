@@ -84,17 +84,6 @@ jobs:
           ts-audience: ${{ secrets.TS_AUDIENCE }}
           ts-tags: ${{ secrets.TS_TAGS }}
 
-      # DEBUG: check whether the connection survives `tailscale down`.
-      # Remove once the DNS-race root cause is confirmed.
-      - name: DEBUG tailscale down
-        run: sudo tailscale down
-
-      - name: DEBUG tailscale status
-        run: |
-          sudo tailscale status
-          sudo tailscale status --json
-          exit 1
-
       - name: Install aha to convert plan output to html
         run: sudo apt-get install aha
 
