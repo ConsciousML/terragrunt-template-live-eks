@@ -17,11 +17,11 @@ import (
 )
 
 // endpointRetries and endpointSleep bound how long each endpoint check waits for its tool to
-// become reachable. Budgeted at 25m to clear app-of-apps sync after apply, which can take ~20m.
+// become reachable. Budgeted at 30m to clear app-of-apps sync after apply, which can take ~20m.
 // reconnectEveryRetries cycles the Tailscale connection again after this many failed attempts,
 // in case the split-DNS route or connection went stale mid-poll.
 const (
-	endpointRetries       = 50
+	endpointRetries       = 60
 	endpointSleep         = 30 * time.Second
 	reconnectEveryRetries = 10
 )
