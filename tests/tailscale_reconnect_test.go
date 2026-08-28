@@ -17,13 +17,17 @@ func reconnectTailscale(t *testing.T) {
 
 	out, err := exec.Command("sudo", "tailscale", "down").CombinedOutput()
 	require.NoError(t, err, "tailscale down: %s", bytes.TrimSpace(out))
-	t.Log("tailscale down")
+	t.Logf("tailscale down: %s", bytes.TrimSpace(out))
 
 	flushDNSCache(t)
 
 	out, err = exec.Command("sudo", "tailscale", "up").CombinedOutput()
 	require.NoError(t, err, "tailscale up: %s", bytes.TrimSpace(out))
-	t.Log("tailscale up")
+	t.Logf("tailscale up: %s", bytes.TrimSpace(out))
+
+	out, err = exec.Command("tailscale", "status").CombinedOutput()
+	require.NoError(t, err, "tailscale status: %s", bytes.TrimSpace(out))
+	t.Logf("tailscale status: %s", bytes.TrimSpace(out))
 }
 
 // flushDNSCache clears the OS DNS cache on macOS and Linux. Failures are logged
