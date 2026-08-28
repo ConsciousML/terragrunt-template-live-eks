@@ -36,6 +36,9 @@ runs:
       with:
         role-to-assume: ${{ inputs.role-to-assume }}
         aws-region: ${{ inputs.aws-region }}
+        # Default STS session is 1h. TestStack's apply and destroy run past that,
+        # expiring the token mid-teardown. Role's max_session_duration must rise too.
+        role-duration-seconds: 7200
 
     # Mise installs all required tools (Terragrunt, OpenTofu, Go, Python, ...)
     # See `mise.toml`.
