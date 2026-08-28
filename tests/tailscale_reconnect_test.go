@@ -15,13 +15,13 @@ import (
 func reconnectTailscale(t *testing.T) {
 	t.Helper()
 
-	out, err := exec.Command("sudo", "tailscale", "down").CombinedOutput()
+	out, err := exec.Command("tailscale", "down").CombinedOutput()
 	require.NoError(t, err, "tailscale down: %s", bytes.TrimSpace(out))
 	t.Logf("tailscale down: %s", bytes.TrimSpace(out))
 
 	flushDNSCache(t)
 
-	out, err = exec.Command("sudo", "tailscale", "up").CombinedOutput()
+	out, err = exec.Command("tailscale", "up").CombinedOutput()
 	require.NoError(t, err, "tailscale up: %s", bytes.TrimSpace(out))
 	t.Logf("tailscale up: %s", bytes.TrimSpace(out))
 
@@ -42,7 +42,7 @@ func flushDNSCache(t *testing.T) {
 		}
 	case "linux":
 		cmds = [][]string{
-			{"sudo", "resolvectl", "flush-caches"},
+			{"resolvectl", "flush-caches"},
 		}
 	default:
 		t.Logf("flushDNSCache: unsupported platform %s, skipping", runtime.GOOS)
