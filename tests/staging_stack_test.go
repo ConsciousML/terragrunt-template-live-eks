@@ -7,17 +7,56 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"strings"
 	"testing"
 	"time"
 
+	http_helper "github.com/gruntwork-io/terratest/modules/http-helper"
 	"github.com/gruntwork-io/terratest/modules/logger"
 	"github.com/gruntwork-io/terratest/modules/terragrunt"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-// TestStack deploys the staging EKS stack, verifies ArgoCD is reachable and
-// login succeeds, and asserts the guestbook application returns HTTP 200.
+// endpointRetries and endpointSleep bound how long each endpoint check waits for its tool to
+// become reachable. Budgeted at 25m to clear app-of-apps sync after apply, which can take ~20m.
+const (
+	endpointRetries = 50
+	endpointSleep   = 30 * time.Second
+)
+
+// endpointCheck describes one stack tool to verify after deploy. Entries with no secretUnit are
+// checked for plain reachability via validate; entries with a secretUnit fetch the password from
+// Secrets Manager and hand it to login instead. Add a new tool here to cover it going forward.
+type endpointCheck struct {
+	name       string                                           // domain_name_<name> stack output
+	path       string                                           // path to poll, only used when secretUnit is empty
+	validate   func(status int, body string) bool               // reachability check, only used when secretUnit is empty
+	secretUnit string                                           // stack unit exposing the password secret name, empty means no auth
+	secretKey  string                                           // output key on secretUnit holding the secret name
+	login      func(t *testing.T, host string, password string) // auth check, only used when secretUnit is set
+}
+
+// statusOK is a validate func for endpoints where reaching the page at all is proof enough.
+func statusOK(status int, _ string) bool {
+	return status == http.StatusOK
+}
+
+var endpointChecks = []endpointCheck{
+	{name: "argocd", secretUnit: "argocd_password", secretKey: "secret_name", login: testArgoCDLogin},
+	{name: "podinfo", path: "/", validate: statusOK},
+	{name: "grafana", secretUnit: "grafana_password", secretKey: "secret_name", login: testGrafanaLogin},
+	{name: "prometheus", path: "/-/healthy", validate: func(status int, body string) bool {
+		return status == http.StatusOK && strings.Contains(body, "Healthy")
+	}},
+	{name: "alertmanager", path: "/api/v2/status", validate: func(status int, body string) bool {
+		return status == http.StatusOK && strings.Contains(body, "cluster")
+	}},
+	{name: "hubble", path: "/", validate: statusOK},
+	{name: "goldilocks", path: "/", validate: statusOK},
+}
+
+// TestStack deploys the staging EKS stack and validates every tool in endpointChecks.
 func TestStack(t *testing.T) {
 	t.Parallel()
 
@@ -73,7 +112,7 @@ func TestStackExists(t *testing.T) {
 	assertStack(t, ctx, stackDir, region)
 }
 
-// assertStack fetches stack outputs and runs all endpoint assertions.
+// assertStack fetches stack outputs and runs every check in endpointChecks.
 // It discards the Terragrunt logger to avoid printing sensitive output values.
 func assertStack(t *testing.T, ctx context.Context, stackDir string, region string) {
 	t.Helper()
@@ -85,13 +124,46 @@ func assertStack(t *testing.T, ctx context.Context, stackDir string, region stri
 	}
 	allOutputs := terragrunt.StackOutputAllContext(t, ctx, silentOptions)
 
-	argocdHost     := unitOutput(t, allOutputs, "domain_name_argocd", "value")
-	secretName     := unitOutput(t, allOutputs, "argocd_password", "secret_name")
-	argocdPassword := fetchAWSSecret(t, ctx, region, secretName)
-	guestbookHost  := unitOutput(t, allOutputs, "domain_name_guestbook", "value")
+	for _, ep := range endpointChecks {
+		host := unitOutput(t, allOutputs, "domain_name_"+ep.name, "value")
 
-	testArgoCDLogin(t, argocdHost, argocdPassword)
-	testGuestbook(t, guestbookHost)
+		if ep.secretUnit == "" {
+			url := "https://" + host + ep.path
+			t.Logf("polling %s until %s is ready", url, ep.name)
+			http_helper.HttpGetWithRetryWithCustomValidation(t, url, nil, endpointRetries, endpointSleep, ep.validate)
+			t.Logf("%s is healthy", ep.name)
+			continue
+		}
+
+		secretName := unitOutput(t, allOutputs, ep.secretUnit, ep.secretKey)
+		password := fetchAWSSecret(t, ctx, region, secretName)
+		ep.login(t, host, password)
+	}
+
+	testNoUnexpectedNetworkDrops(t)
+}
+
+// testNoUnexpectedNetworkDrops asserts Cilium hasn't dropped any traffic beyond the
+// "Unsupported L3 protocol DROPPED (ICMPv6 RouterSolicitation)" noise this IPv4-only cluster
+// always produces regardless of policy (see docs/network-policies.md in the catalog repo).
+// hubble observe without -f reads the buffered flows and exits, no follow/timeout needed.
+func testNoUnexpectedNetworkDrops(t *testing.T) {
+	t.Helper()
+
+	_, err := exec.LookPath("hubble")
+	require.NoError(t, err, "hubble CLI not found in PATH — install it before running this test")
+
+	// Only stdout carries flow lines, hubble logs warnings (e.g. CLI/relay version mismatch) to stderr.
+	out, err := exec.Command("hubble", "observe", "--verdict", "DROPPED", "-P").Output()
+	require.NoError(t, err, "hubble observe failed")
+
+	var unexpected []string
+	for _, line := range strings.Split(string(out), "\n") {
+		if line != "" && !strings.Contains(line, "Unsupported L3 protocol DROPPED") {
+			unexpected = append(unexpected, line)
+		}
+	}
+	assert.Empty(t, unexpected, "unexpected dropped flows:\n%s", strings.Join(unexpected, "\n"))
 }
 
 // testArgoCDLogin asserts that ArgoCD is healthy and that a login request with
@@ -100,7 +172,7 @@ func testArgoCDLogin(t *testing.T, host string, password string) {
 	t.Helper()
 
 	t.Logf("polling https://%s/healthz until ArgoCD is ready", host)
-	assertReachable(t, "wait for ArgoCD to be ready", "https://"+host+"/healthz", 20, 30*time.Second)
+	http_helper.HttpGetWithRetryWithCustomValidation(t, "https://"+host+"/healthz", nil, endpointRetries, endpointSleep, statusOK)
 	t.Log("ArgoCD is healthy")
 
 	t.Logf("logging in to ArgoCD at https://%s/api/v1/session", host)
@@ -124,11 +196,32 @@ func testArgoCDLogin(t *testing.T, host string, password string) {
 	t.Log("ArgoCD login succeeded and session token received")
 }
 
-// testGuestbook asserts that the guestbook application is reachable and returns HTTP 200.
-func testGuestbook(t *testing.T, host string) {
+// testGrafanaLogin asserts that Grafana is healthy and that an admin login request with
+// the given credentials succeeds.
+func testGrafanaLogin(t *testing.T, host string, password string) {
 	t.Helper()
 
-	t.Logf("polling https://%s until guestbook is ready", host)
-	assertReachable(t, "wait for guestbook to be ready", "https://"+host, 20, 30*time.Second)
-	t.Log("guestbook is reachable")
+	t.Logf("polling https://%s/api/health until Grafana is ready", host)
+	http_helper.HttpGetWithRetryWithCustomValidation(t, "https://"+host+"/api/health", nil, endpointRetries, endpointSleep, statusOK)
+	t.Log("Grafana is healthy")
+
+	t.Logf("logging in to Grafana at https://%s/login", host)
+	body, err := json.Marshal(map[string]string{
+		"user":     "admin",
+		"password": password,
+	})
+	require.NoError(t, err, "failed to marshal Grafana login request body")
+
+	resp, err := http.Post("https://"+host+"/login", "application/json", bytes.NewReader(body))
+	require.NoError(t, err, "POST https://%s/login failed", host)
+	defer resp.Body.Close()
+
+	require.Equal(t, http.StatusOK, resp.StatusCode, "Grafana login returned unexpected status: got %d, want 200", resp.StatusCode)
+
+	var loginResponse struct {
+		Message string `json:"message"`
+	}
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&loginResponse), "failed to decode Grafana login response")
+	assert.NotEmpty(t, loginResponse.Message, "Grafana login response message is empty — login may have failed")
+	t.Log("Grafana login succeeded")
 }
