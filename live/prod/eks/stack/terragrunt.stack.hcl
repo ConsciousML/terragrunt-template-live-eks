@@ -13,7 +13,7 @@ locals {
 
   # PROD: pinned to a release tag instead of dev's "refs/heads/main", so app-of-apps tracks a
   # fixed catalog version instead of the latest commit on main.
-  app_of_apps_target_revision = "v0.1.2"
+  app_of_apps_target_revision = "v0.1.1"
 
   github_locals            = read_terragrunt_config(find_in_parent_folders("github.hcl")).locals
   github_owner_catalog     = local.github_locals.github_owner_catalog
