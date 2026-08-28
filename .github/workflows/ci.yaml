@@ -84,8 +84,11 @@ jobs:
           ts-audience: ${{ secrets.TS_AUDIENCE }}
           ts-tags: ${{ secrets.TS_TAGS }}
 
-      # DEBUG: dump Tailscale state right after connect, before cluster/connector exist.
+      # DEBUG: check whether the connection survives `tailscale down`.
       # Remove once the DNS-race root cause is confirmed.
+      - name: DEBUG tailscale down
+        run: sudo tailscale down
+
       - name: DEBUG tailscale status
         run: |
           sudo tailscale status
@@ -253,6 +256,14 @@ jobs:
           ts-oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
           ts-audience: ${{ secrets.TS_AUDIENCE }}
           ts-tags: ${{ secrets.TS_TAGS }}
+
+      # The EKS API split-DNS route only works once the in-cluster Tailscale connector is up,
+      # which happens well after this job starts. Staying connected during the from-scratch apply
+      # races that: the Kubernetes and Helm providers can resolve the cluster hostname through
+      # Tailscale before the connector exists. Disconnect for the apply. Terratest reconnects
+      # (tailscale_reconnect_test.go) once the stack and connector are up.
+      - name: Disconnect Tailscale before cluster apply
+        run: sudo tailscale down
 
       - name: Request Tailscale API token using WIF credentials
         id: ts-token-exchange

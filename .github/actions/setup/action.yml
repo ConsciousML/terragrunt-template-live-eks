@@ -64,3 +64,6 @@ runs:
         oauth-client-id: ${{ inputs.ts-oauth-client-id }}
         audience: ${{ inputs.ts-audience }}
         tags: ${{ inputs.ts-tags }}
+        # Linux rejects advertised subnet routes by default (unlike macOS/Windows), so without
+        # this flag the runner can never reach anything behind the Tailscale connector.
+        args: --accept-routes
