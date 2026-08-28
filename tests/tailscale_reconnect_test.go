@@ -21,9 +21,7 @@ func reconnectTailscale(t *testing.T) {
 
 	flushDNSCache(t)
 
-	// Flags aren't persisted across `tailscale up` invocations, so --accept-routes (needed on
-	// Linux, which rejects subnet routes by default) must be re-specified here.
-	out, err = exec.Command("sudo", "tailscale", "up", "--accept-routes").CombinedOutput()
+	out, err = exec.Command("sudo", "tailscale", "up").CombinedOutput()
 	require.NoError(t, err, "tailscale up: %s", bytes.TrimSpace(out))
 	t.Log("tailscale up")
 }

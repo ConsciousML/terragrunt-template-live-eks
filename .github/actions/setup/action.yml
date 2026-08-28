@@ -65,5 +65,7 @@ runs:
         audience: ${{ inputs.ts-audience }}
         tags: ${{ inputs.ts-tags }}
         # Linux rejects advertised subnet routes by default (unlike macOS/Windows), so without
-        # this flag the runner can never reach anything behind the Tailscale connector.
-        args: --accept-routes
+        # this the runner can never reach anything behind the Tailscale connector. The action
+        # already passes --accept-routes itself, so use its dedicated input, not `args` (that
+        # duplicated the flag and errored).
+        accept-routes: true
