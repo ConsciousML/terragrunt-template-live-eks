@@ -99,11 +99,6 @@ func TestStack(t *testing.T) {
 
 	reconnectTailscale(t)
 
-	// TEMP: reconnect alone hasn't reliably fixed split-DNS resolution. Pause for
-	// manual verification (tailscale status / dig) before continuing.
-	fmt.Println("reconnectTailscale done. Verify DNS manually, then press Enter to continue...")
-	fmt.Fscanln(os.Stdin)
-
 	assertStack(t, ctx, allOutputs, region)
 }
 
