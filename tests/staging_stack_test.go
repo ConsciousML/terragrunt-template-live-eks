@@ -81,13 +81,23 @@ func TestStack(t *testing.T) {
 
 	terragrunt.ApplyAllContext(t, ctx, options)
 
+	// Fetched once and reused below: terragrunt output --all is expensive to re-run.
+	silentOptions := &terragrunt.Options{
+		TerragruntDir:  stackDir,
+		TerragruntArgs: []string{"--log-level", "error"},
+		Logger:         logger.Discard,
+	}
+	allOutputs := terragrunt.StackOutputAllContext(t, ctx, silentOptions)
+
+	updateKubeconfig(t, allOutputs, region)
+
 	waitForAppOfApps(t)
 
 	// CI disconnects Tailscale before apply (see ci.yaml) to avoid racing the in-cluster
 	// connector's split-DNS route. Reconnect now that the stack, and the connector, are up.
 	reconnectTailscale(t)
 
-	assertStack(t, ctx, stackDir, region)
+	assertStack(t, ctx, allOutputs, region)
 }
 
 // TestStackExists runs only the assertion phase against an already-deployed
@@ -111,7 +121,14 @@ func TestStackExists(t *testing.T) {
 	region := os.Getenv("AWS_REGION")
 	require.NotEmpty(t, region, "AWS_REGION must be set")
 
-	assertStack(t, ctx, stackDir, region)
+	silentOptions := &terragrunt.Options{
+		TerragruntDir:  stackDir,
+		TerragruntArgs: []string{"--log-level", "error"},
+		Logger:         logger.Discard,
+	}
+	allOutputs := terragrunt.StackOutputAllContext(t, ctx, silentOptions)
+
+	assertStack(t, ctx, allOutputs, region)
 }
 
 // pollUntilReady polls url until validate passes, sleeping sleepBetweenRetries between attempts
@@ -147,17 +164,9 @@ func pollUntilReady(t *testing.T, url string, retries int, sleepBetweenRetries t
 	t.Fatalf("%s did not become ready after %d retries", url, retries)
 }
 
-// assertStack fetches stack outputs and runs every check in endpointChecks.
-// It discards the Terragrunt logger to avoid printing sensitive output values.
-func assertStack(t *testing.T, ctx context.Context, stackDir string, region string) {
+// assertStack runs every check in endpointChecks against allOutputs.
+func assertStack(t *testing.T, ctx context.Context, allOutputs map[string]any, region string) {
 	t.Helper()
-
-	silentOptions := &terragrunt.Options{
-		TerragruntDir:  stackDir,
-		TerragruntArgs: []string{"--log-level", "error"},
-		Logger:         logger.Discard,
-	}
-	allOutputs := terragrunt.StackOutputAllContext(t, ctx, silentOptions)
 
 	for _, ep := range endpointChecks {
 		host := unitOutput(t, allOutputs, "domain_name_"+ep.name, "value")
