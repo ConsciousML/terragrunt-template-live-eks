@@ -5,6 +5,7 @@ import (
 	"os/exec"
 	"runtime"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 )
@@ -25,15 +26,8 @@ func reconnectTailscale(t *testing.T) {
 	require.NoError(t, err, "[ERROR] tailscale up: %s", bytes.TrimSpace(out))
 	t.Logf("[INFO] tailscale up: %s", bytes.TrimSpace(out))
 
-	if runtime.GOOS == "darwin" {
-		// macOS doesn't reliably re-push DNS config on a plain down/up cycle. Toggling
-		// accept-dns forces the client to reapply it.
-		out, err = exec.Command("tailscale", "set", "--accept-dns=false").CombinedOutput()
-		require.NoError(t, err, "[ERROR] tailscale set --accept-dns=false: %s", bytes.TrimSpace(out))
-
-		out, err = exec.Command("tailscale", "set", "--accept-dns=true").CombinedOutput()
-		require.NoError(t, err, "[ERROR] tailscale set --accept-dns=true: %s", bytes.TrimSpace(out))
-	}
+	// let the backend settle before checking status.
+	time.Sleep(2 * time.Second)
 
 	out, err = exec.Command("tailscale", "status").CombinedOutput()
 	require.NoError(t, err, "[ERROR] tailscale status: %s", bytes.TrimSpace(out))
@@ -49,6 +43,11 @@ func flushDNSCache(t *testing.T) {
 	case "darwin":
 		cmds = [][]string{
 			{"dscacheutil", "-flushcache"},
+			// macOS doesn't reliably re-push DNS config on a plain down/up cycle.
+			// Toggling accept-dns while still down forces the client to reapply it
+			// once it comes back up.
+			{"tailscale", "set", "--accept-dns=false"},
+			{"tailscale", "set", "--accept-dns=true"},
 		}
 	case "linux":
 		cmds = [][]string{
