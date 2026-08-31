@@ -21,7 +21,8 @@ import (
 // to become reachable. waitForAppOfApps already confirms every app is healthy, so this
 // budget only covers DNS propagation and ALB/target-group lag, not app startup.
 const (
-	endpointRetries = 30
+	// TEMP: bumped to 30min while debugging DNS propagation lag, revert to 30 once fixed.
+	endpointRetries = 180
 	endpointSleep   = 10 * time.Second
 )
 
@@ -82,6 +83,14 @@ func TestStack(t *testing.T) {
 	}
 
 	defer terragrunt.DestroyAllContext(t, ctx, options)
+
+	// Runs before the destroy defer above (LIFO) no matter what fails afterward. During destroy
+	// the tailscale operator is torn down partway through and stops serving the tunnel, so
+	// destroy must resolve the EKS API publicly rather than through the now-dead private route.
+	defer func() {
+		out, err := exec.Command("tailscale", "down").CombinedOutput()
+		assert.NoError(t, err, "[ERROR] tailscale down before destroy: %s", strings.TrimSpace(string(out)))
+	}()
 
 	terragrunt.ApplyAllContext(t, ctx, options)
 
