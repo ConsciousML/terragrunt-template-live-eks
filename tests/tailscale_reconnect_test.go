@@ -16,18 +16,28 @@ func reconnectTailscale(t *testing.T) {
 	t.Helper()
 
 	out, err := exec.Command("tailscale", "down").CombinedOutput()
-	require.NoError(t, err, "tailscale down: %s", bytes.TrimSpace(out))
-	t.Logf("tailscale down: %s", bytes.TrimSpace(out))
+	require.NoError(t, err, "[ERROR] tailscale down: %s", bytes.TrimSpace(out))
+	t.Logf("[INFO] tailscale down: %s", bytes.TrimSpace(out))
 
 	flushDNSCache(t)
 
 	out, err = exec.Command("tailscale", "up").CombinedOutput()
-	require.NoError(t, err, "tailscale up: %s", bytes.TrimSpace(out))
-	t.Logf("tailscale up: %s", bytes.TrimSpace(out))
+	require.NoError(t, err, "[ERROR] tailscale up: %s", bytes.TrimSpace(out))
+	t.Logf("[INFO] tailscale up: %s", bytes.TrimSpace(out))
+
+	if runtime.GOOS == "darwin" {
+		// macOS doesn't reliably re-push DNS config on a plain down/up cycle. Toggling
+		// accept-dns forces the client to reapply it.
+		out, err = exec.Command("tailscale", "set", "--accept-dns=false").CombinedOutput()
+		require.NoError(t, err, "[ERROR] tailscale set --accept-dns=false: %s", bytes.TrimSpace(out))
+
+		out, err = exec.Command("tailscale", "set", "--accept-dns=true").CombinedOutput()
+		require.NoError(t, err, "[ERROR] tailscale set --accept-dns=true: %s", bytes.TrimSpace(out))
+	}
 
 	out, err = exec.Command("tailscale", "status").CombinedOutput()
-	require.NoError(t, err, "tailscale status: %s", bytes.TrimSpace(out))
-	t.Logf("tailscale status: %s", bytes.TrimSpace(out))
+	require.NoError(t, err, "[ERROR] tailscale status: %s", bytes.TrimSpace(out))
+	t.Logf("[INFO] tailscale status: %s", bytes.TrimSpace(out))
 }
 
 // flushDNSCache clears the OS DNS cache on macOS and Linux. Failures are logged
@@ -45,15 +55,15 @@ func flushDNSCache(t *testing.T) {
 			{"resolvectl", "flush-caches"},
 		}
 	default:
-		t.Logf("flushDNSCache: unsupported platform %s, skipping", runtime.GOOS)
+		t.Logf("[INFO] flushDNSCache: unsupported platform %s, skipping", runtime.GOOS)
 		return
 	}
 	for _, args := range cmds {
 		out, err := exec.Command(args[0], args[1:]...).CombinedOutput()
 		if err != nil {
-			t.Logf("flushDNSCache: %v: %s (non-fatal)", args, bytes.TrimSpace(out))
+			t.Logf("[ERROR] flushDNSCache: %v: %s (non-fatal)", args, bytes.TrimSpace(out))
 		} else {
-			t.Logf("flushDNSCache: %v: ok", args)
+			t.Logf("[INFO] flushDNSCache: %v: ok", args)
 		}
 	}
 }

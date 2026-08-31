@@ -42,7 +42,7 @@ func waitForAppOfApps(t *testing.T) {
 			t.Logf("[ERROR] kubectl get application attempt %d/%d failed: %v", attempt, appOfAppsRetries+1, err)
 		} else {
 			app, found := list.find(appOfAppsName)
-			require.True(t, found, "application %s not found in argocd namespace", appOfAppsName)
+			require.True(t, found, "[ERROR] application %s not found in argocd namespace", appOfAppsName)
 
 			sync, health := app.Status.Sync.Status, app.Status.Health.Status
 			t.Logf("[INFO] app-of-apps attempt %d/%d: sync=%s health=%s", attempt, appOfAppsRetries+1, sync, health)

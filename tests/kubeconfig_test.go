@@ -15,6 +15,6 @@ func updateKubeconfig(t *testing.T, allOutputs map[string]any, region string) {
 	clusterName := unitOutput(t, allOutputs, "cluster", "cluster_name")
 
 	out, err := exec.Command("aws", "eks", "update-kubeconfig", "--region", region, "--name", clusterName).CombinedOutput()
-	require.NoError(t, err, "aws eks update-kubeconfig: %s", bytes.TrimSpace(out))
+	require.NoError(t, err, "[ERROR] aws eks update-kubeconfig: %s", bytes.TrimSpace(out))
 	t.Logf("[INFO] kubeconfig updated for cluster %s", clusterName)
 }

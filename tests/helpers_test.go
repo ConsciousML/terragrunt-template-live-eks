@@ -18,9 +18,9 @@ import (
 func unitOutput(t *testing.T, allOutputs map[string]any, unitName string, key string) string {
 	t.Helper()
 	unit, ok := allOutputs[unitName].(map[string]any)
-	require.True(t, ok, "stack output %q missing or wrong type", unitName)
+	require.True(t, ok, "[ERROR] stack output %q missing or wrong type", unitName)
 	value, ok := unit[key].(string)
-	require.True(t, ok, "output %q.%s missing or wrong type", unitName, key)
+	require.True(t, ok, "[ERROR] output %q.%s missing or wrong type", unitName, key)
 	return value
 }
 
@@ -30,20 +30,20 @@ func fetchAWSSecret(t *testing.T, ctx context.Context, region string, secretName
 	t.Helper()
 
 	cfg, err := config.LoadDefaultConfig(ctx, config.WithRegion(region))
-	require.NoError(t, err, "failed to load AWS config for region %s", region)
+	require.NoError(t, err, "[ERROR] failed to load AWS config for region %s", region)
 
 	svc := secretsmanager.NewFromConfig(cfg)
 	secret, err := svc.GetSecretValue(ctx, &secretsmanager.GetSecretValueInput{
 		SecretId:     aws.String(secretName),
 		VersionStage: aws.String("AWSCURRENT"),
 	})
-	require.NoError(t, err, "failed to retrieve secret %q from Secrets Manager", secretName)
+	require.NoError(t, err, "[ERROR] failed to retrieve secret %q from Secrets Manager", secretName)
 
 	var secretData struct {
 		Plaintext string `json:"plaintext"`
 	}
-	require.NoError(t, json.Unmarshal([]byte(*secret.SecretString), &secretData), "failed to unmarshal secret JSON for %q", secretName)
-	require.NotEmpty(t, secretData.Plaintext, "plaintext field is empty in secret %q", secretName)
+	require.NoError(t, json.Unmarshal([]byte(*secret.SecretString), &secretData), "[ERROR] failed to unmarshal secret JSON for %q", secretName)
+	require.NotEmpty(t, secretData.Plaintext, "[ERROR] plaintext field is empty in secret %q", secretName)
 	return secretData.Plaintext
 }
 
@@ -53,12 +53,12 @@ func postLoginJSON(t *testing.T, url string, reqBody any, out any) {
 	t.Helper()
 
 	body, err := json.Marshal(reqBody)
-	require.NoError(t, err, "failed to marshal request body for %s", url)
+	require.NoError(t, err, "[ERROR] failed to marshal request body for %s", url)
 
 	resp, err := http.Post(url, "application/json", bytes.NewReader(body))
-	require.NoError(t, err, "POST %s failed", url)
+	require.NoError(t, err, "[ERROR] POST %s failed", url)
 	defer resp.Body.Close()
 
-	require.Equal(t, http.StatusOK, resp.StatusCode, "login to %s returned unexpected status: got %d, want 200", url, resp.StatusCode)
-	require.NoError(t, json.NewDecoder(resp.Body).Decode(out), "failed to decode login response from %s", url)
+	require.Equal(t, http.StatusOK, resp.StatusCode, "[ERROR] login to %s returned unexpected status: got %d, want 200", url, resp.StatusCode)
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(out), "[ERROR] failed to decode login response from %s", url)
 }

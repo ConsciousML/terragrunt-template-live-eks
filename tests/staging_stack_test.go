@@ -2,6 +2,7 @@ package tests
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"os"
 	"os/exec"
@@ -62,16 +63,16 @@ func TestStack(t *testing.T) {
 	ctx := t.Context()
 
 	region := os.Getenv("AWS_REGION")
-	require.NotEmpty(t, region, "AWS_REGION must be set")
+	require.NotEmpty(t, region, "[ERROR] AWS_REGION must be set")
 
 	// Tailscale CLI is needed to flush DNS cache after Terragrunt apply
 	_, err := exec.LookPath("tailscale")
-	require.NoError(t, err, "tailscale CLI not found in PATH — install it before running this test")
+	require.NoError(t, err, "[ERROR] tailscale CLI not found in PATH — install it before running this test")
 
 	// Disconnect before apply to avoid racing the in-cluster connector's split-DNS route (see
 	// ci.yaml). Reconnected once the stack and connector are up (reconnectTailscale below).
 	out, err := exec.Command("tailscale", "down").CombinedOutput()
-	require.NoError(t, err, "tailscale down: %s", strings.TrimSpace(string(out)))
+	require.NoError(t, err, "[ERROR] tailscale down: %s", strings.TrimSpace(string(out)))
 
 	stackDir := "../live/staging/eks/stack"
 
@@ -98,6 +99,11 @@ func TestStack(t *testing.T) {
 
 	reconnectTailscale(t)
 
+	// TEMP: reconnect alone hasn't reliably fixed split-DNS resolution. Pause for
+	// manual verification (tailscale status / dig) before continuing.
+	fmt.Println("reconnectTailscale done. Verify DNS manually, then press Enter to continue...")
+	fmt.Fscanln(os.Stdin)
+
 	assertStack(t, ctx, allOutputs, region)
 }
 
@@ -120,7 +126,7 @@ func TestStackExists(t *testing.T) {
 	stackDir := "../live/staging/eks/stack"
 
 	region := os.Getenv("AWS_REGION")
-	require.NotEmpty(t, region, "AWS_REGION must be set")
+	require.NotEmpty(t, region, "[ERROR] AWS_REGION must be set")
 
 	silentOptions := &terragrunt.Options{
 		TerragruntDir:  stackDir,
@@ -144,9 +150,9 @@ func pollUntilReady(t *testing.T, url string, retries int, sleepBetweenRetries t
 		}
 
 		if err != nil {
-			t.Logf("poll %s attempt %d/%d failed: %v", url, attempt, retries+1, err)
+			t.Logf("[ERROR] poll %s attempt %d/%d failed: %v", url, attempt, retries+1, err)
 		} else {
-			t.Logf("poll %s attempt %d/%d failed: unexpected status %d", url, attempt, retries+1, status)
+			t.Logf("[ERROR] poll %s attempt %d/%d failed: unexpected status %d", url, attempt, retries+1, status)
 		}
 
 		if attempt > retries {
@@ -156,7 +162,7 @@ func pollUntilReady(t *testing.T, url string, retries int, sleepBetweenRetries t
 		time.Sleep(sleepBetweenRetries)
 	}
 
-	t.Fatalf("%s did not become ready after %d retries", url, retries)
+	t.Fatalf("[ERROR] %s did not become ready after %d retries", url, retries)
 }
 
 // assertStack runs every check in endpointChecks against allOutputs.
@@ -168,9 +174,9 @@ func assertStack(t *testing.T, ctx context.Context, allOutputs map[string]any, r
 
 		if ep.secretUnit == "" {
 			url := "https://" + host + ep.path
-			t.Logf("polling %s until %s is ready", url, ep.name)
+			t.Logf("[INFO] polling %s until %s is ready", url, ep.name)
 			pollUntilReady(t, url, endpointRetries, endpointSleep, ep.validate)
-			t.Logf("%s is healthy", ep.name)
+			t.Logf("[INFO] %s is healthy", ep.name)
 			continue
 		}
 
@@ -190,11 +196,11 @@ func testNoUnexpectedNetworkDrops(t *testing.T) {
 	t.Helper()
 
 	_, err := exec.LookPath("hubble")
-	require.NoError(t, err, "hubble CLI not found in PATH — install it before running this test")
+	require.NoError(t, err, "[ERROR] hubble CLI not found in PATH — install it before running this test")
 
 	// Only stdout carries flow lines, hubble logs warnings (e.g. CLI and relay version mismatch) to stderr.
 	out, err := exec.Command("hubble", "observe", "--verdict", "DROPPED", "-P").Output()
-	require.NoError(t, err, "hubble observe failed")
+	require.NoError(t, err, "[ERROR] hubble observe failed")
 
 	var unexpected []string
 	for _, line := range strings.Split(string(out), "\n") {
@@ -202,7 +208,7 @@ func testNoUnexpectedNetworkDrops(t *testing.T) {
 			unexpected = append(unexpected, line)
 		}
 	}
-	assert.Empty(t, unexpected, "unexpected dropped flows:\n%s", strings.Join(unexpected, "\n"))
+	assert.Empty(t, unexpected, "[ERROR] unexpected dropped flows:\n%s", strings.Join(unexpected, "\n"))
 }
 
 // testArgoCDLogin asserts that ArgoCD is healthy and that a login request with
@@ -210,11 +216,11 @@ func testNoUnexpectedNetworkDrops(t *testing.T) {
 func testArgoCDLogin(t *testing.T, host string, password string) {
 	t.Helper()
 
-	t.Logf("polling https://%s/healthz until ArgoCD is ready", host)
+	t.Logf("[INFO] polling https://%s/healthz until ArgoCD is ready", host)
 	pollUntilReady(t, "https://"+host+"/healthz", endpointRetries, endpointSleep, statusOK)
-	t.Log("ArgoCD is healthy")
+	t.Log("[INFO] ArgoCD is healthy")
 
-	t.Logf("logging in to ArgoCD at https://%s/api/v1/session", host)
+	t.Logf("[INFO] logging in to ArgoCD at https://%s/api/v1/session", host)
 	var session struct {
 		Token string `json:"token"`
 	}
@@ -222,8 +228,8 @@ func testArgoCDLogin(t *testing.T, host string, password string) {
 		"username": "admin",
 		"password": password,
 	}, &session)
-	assert.NotEmpty(t, session.Token, "ArgoCD session token is empty — login may have succeeded but returned no token")
-	t.Log("ArgoCD login succeeded and session token received")
+	assert.NotEmpty(t, session.Token, "[ERROR] ArgoCD session token is empty — login may have succeeded but returned no token")
+	t.Log("[INFO] ArgoCD login succeeded and session token received")
 }
 
 // testGrafanaLogin asserts that Grafana is healthy and that an admin login request with
@@ -231,11 +237,11 @@ func testArgoCDLogin(t *testing.T, host string, password string) {
 func testGrafanaLogin(t *testing.T, host string, password string) {
 	t.Helper()
 
-	t.Logf("polling https://%s/api/health until Grafana is ready", host)
+	t.Logf("[INFO] polling https://%s/api/health until Grafana is ready", host)
 	pollUntilReady(t, "https://"+host+"/api/health", endpointRetries, endpointSleep, statusOK)
-	t.Log("Grafana is healthy")
+	t.Log("[INFO] Grafana is healthy")
 
-	t.Logf("logging in to Grafana at https://%s/login", host)
+	t.Logf("[INFO] logging in to Grafana at https://%s/login", host)
 	var loginResponse struct {
 		Message string `json:"message"`
 	}
@@ -243,6 +249,6 @@ func testGrafanaLogin(t *testing.T, host string, password string) {
 		"user":     "admin",
 		"password": password,
 	}, &loginResponse)
-	assert.NotEmpty(t, loginResponse.Message, "Grafana login response message is empty — login may have failed")
-	t.Log("Grafana login succeeded")
+	assert.NotEmpty(t, loginResponse.Message, "[ERROR] Grafana login response message is empty — login may have failed")
+	t.Log("[INFO] Grafana login succeeded")
 }
