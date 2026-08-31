@@ -69,6 +69,11 @@ func TestStack(t *testing.T) {
 	_, err := exec.LookPath("tailscale")
 	require.NoError(t, err, "tailscale CLI not found in PATH — install it before running this test")
 
+	// Disconnect before apply to avoid racing the in-cluster connector's split-DNS route (see
+	// ci.yaml). Reconnected once the stack, and the connector, are up (reconnectTailscale below).
+	out, err := exec.Command("tailscale", "down").CombinedOutput()
+	require.NoError(t, err, "tailscale down: %s", strings.TrimSpace(string(out)))
+
 	stackDir := "../live/staging/eks/stack"
 
 	options := &terragrunt.Options{
@@ -92,8 +97,6 @@ func TestStack(t *testing.T) {
 
 	waitForAppOfApps(t)
 
-	// CI disconnects Tailscale before apply (see ci.yaml) to avoid racing the in-cluster
-	// connector's split-DNS route. Reconnect now that the stack, and the connector, are up.
 	reconnectTailscale(t)
 
 	assertStack(t, ctx, allOutputs, region)

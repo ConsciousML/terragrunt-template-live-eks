@@ -40,14 +40,9 @@ Follow the [environment variables guide](https://github.com/ConsciousML/terragru
 source .env
 ```
 
-Deploy and test the full stack (apply + assert + destroy):
-```bash
-go test -v -run TestStack ./tests/... -timeout 120m
-```
-
-A run can take a while end to end (see the wait budgets in `app_of_apps_wait_test.go` and
-`staging_stack_test.go`). Pipe through `tee` to keep a log file for later debugging (a stall or
-failure) while still watching progress live in the terminal:
+Deploy and test the full stack (apply + assert + destroy). A run can take a while end to end (see
+the wait budgets in `app_of_apps_wait_test.go` and `staging_stack_test.go`), so pipe through `tee`
+to keep a log file for debugging a stall or failure:
 ```bash
 go test -v -run TestStack ./tests/... -timeout 120m 2>&1 | tee /tmp/test.log
 ```
