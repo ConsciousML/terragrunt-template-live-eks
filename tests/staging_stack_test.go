@@ -143,10 +143,12 @@ func TestStackExists(t *testing.T) {
 func pollUntilReady(t *testing.T, url string, retries int, sleepBetweenRetries time.Duration, validate func(int, string) bool) {
 	t.Helper()
 
-	for attempt := 1; attempt <= retries+1; attempt++ {
+	retryUntil(t, retries, sleepBetweenRetries, func() {
+		t.Fatalf("[ERROR] %s did not become ready after %d retries", url, retries)
+	}, func(attempt int) (ready bool, abort bool) {
 		status, body, err := http_helper.HttpGetE(t, url, nil)
 		if err == nil && validate(status, body) {
-			return
+			return true, false
 		}
 
 		if err != nil {
@@ -154,15 +156,8 @@ func pollUntilReady(t *testing.T, url string, retries int, sleepBetweenRetries t
 		} else {
 			t.Logf("[ERROR] poll %s attempt %d/%d failed: unexpected status %d", url, attempt, retries+1, status)
 		}
-
-		if attempt > retries {
-			break
-		}
-
-		time.Sleep(sleepBetweenRetries)
-	}
-
-	t.Fatalf("[ERROR] %s did not become ready after %d retries", url, retries)
+		return false, false
+	})
 }
 
 // assertStack runs every check in endpointChecks against allOutputs.

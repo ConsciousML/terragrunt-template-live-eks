@@ -36,37 +36,35 @@ func waitForAppOfApps(t *testing.T) {
 
 	stall := newStallDetector(appOfAppsStallAfter)
 
-	for attempt := 1; attempt <= appOfAppsRetries+1; attempt++ {
+	retryUntil(t, appOfAppsRetries, appOfAppsSleep, func() {
+		printPodsAllNamespaces(t)
+		t.Fatalf("[ERROR] app-of-apps did not become Synced and Healthy after %d retries", appOfAppsRetries)
+	}, func(attempt int) (ready bool, abort bool) {
 		list, err := listApps(t)
 		if err != nil {
 			t.Logf("[ERROR] kubectl get application attempt %d/%d failed: %v", attempt, appOfAppsRetries+1, err)
-		} else {
-			app, found := list.find(appOfAppsName)
-			require.True(t, found, "[ERROR] application %s not found in argocd namespace", appOfAppsName)
-
-			sync, health := app.Status.Sync.Status, app.Status.Health.Status
-			t.Logf("[INFO] app-of-apps attempt %d/%d: sync=%s health=%s", attempt, appOfAppsRetries+1, sync, health)
-
-			if sync == "Synced" && health == "Healthy" {
-				t.Log("[INFO] app-of-apps is Synced and Healthy")
-				return
-			}
-
-			// check if stale: no app's state changed in appOfAppsStallAfter
-			if stall.Stalled(list.state()) {
-				printPodsAllNamespaces(t)
-				t.Fatalf("[ERROR] app-of-apps stuck at sync=%s health=%s: no child application changed state for %s", sync, health, appOfAppsStallAfter)
-			}
+			return false, false
 		}
 
-		if attempt > appOfAppsRetries {
-			break
-		}
-		time.Sleep(appOfAppsSleep)
-	}
+		app, found := list.find(appOfAppsName)
+		require.True(t, found, "[ERROR] application %s not found in argocd namespace", appOfAppsName)
 
-	printPodsAllNamespaces(t)
-	t.Fatalf("[ERROR] app-of-apps did not become Synced and Healthy after %d retries", appOfAppsRetries)
+		sync, health := app.Status.Sync.Status, app.Status.Health.Status
+		t.Logf("[INFO] app-of-apps attempt %d/%d: sync=%s health=%s", attempt, appOfAppsRetries+1, sync, health)
+
+		if sync == "Synced" && health == "Healthy" {
+			t.Log("[INFO] app-of-apps is Synced and Healthy")
+			return true, false
+		}
+
+		// check if stale: no app's state changed in appOfAppsStallAfter
+		if stall.Stalled(list.state()) {
+			printPodsAllNamespaces(t)
+			t.Fatalf("[ERROR] app-of-apps stuck at sync=%s health=%s: no child application changed state for %s", sync, health, appOfAppsStallAfter)
+			return false, true
+		}
+		return false, false
+	})
 }
 
 // printPodsAllNamespaces dumps kubectl get pod -A for debugging when the app-of-apps

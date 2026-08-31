@@ -6,12 +6,37 @@ import (
 	"encoding/json"
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
 	"github.com/stretchr/testify/require"
 )
+
+// retryUntil calls check on each attempt (1-indexed, up to retries+1), sleeping
+// sleepBetweenRetries in between. check logs its own failure detail and returns ready to stop
+// early, or abort to stop without using the rest of the budget (a stall detector firing, say).
+// Either way check owns any t.Fatalf. If the budget runs out, onTimeout runs and must fail the
+// test.
+func retryUntil(t *testing.T, retries int, sleepBetweenRetries time.Duration, onTimeout func(), check func(attempt int) (ready bool, abort bool)) {
+	t.Helper()
+
+	for attempt := 1; attempt <= retries+1; attempt++ {
+		ready, abort := check(attempt)
+		if ready || abort {
+			return
+		}
+
+		if attempt > retries {
+			break
+		}
+
+		time.Sleep(sleepBetweenRetries)
+	}
+
+	onTimeout()
+}
 
 // unitOutput extracts a named string output from a Terragrunt stack unit.
 // It fails the test immediately if the unit or the key is missing or not a string.
