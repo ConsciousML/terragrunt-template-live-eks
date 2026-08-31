@@ -81,6 +81,8 @@ func TestStack(t *testing.T) {
 
 	terragrunt.ApplyAllContext(t, ctx, options)
 
+	waitForAppOfApps(t)
+
 	// CI disconnects Tailscale before apply (see ci.yaml) to avoid racing the in-cluster
 	// connector's split-DNS route. Reconnect now that the stack, and the connector, are up.
 	reconnectTailscale(t)
