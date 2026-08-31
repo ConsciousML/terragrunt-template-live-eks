@@ -1,7 +1,7 @@
 # Test Terragrunt Stacks With Terratest
 
 ## Prerequisites 
-Perform the [quickstart](../../../README.md#getting-started) up to `Authenticate with AWS` (included).
+Perform the [quickstart](../README.md#getting-started) up to `Authenticate with AWS` (included).
 
 ## What It Tests
 

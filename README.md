@@ -98,6 +98,9 @@ echo 'eval "$(~/.local/bin/mise activate bash)"' >> ~/.bashrc && source ~/.bashr
 
 For more information on how to use mise, read their [getting started guide](https://mise.jdx.dev/getting-started.html).
 
+`mise.toml` doesn't manage Tailscale. It has no mise plugin. Install it separately either way,
+see [Tailscale's download page](https://tailscale.com/download).
+
 **Option 2: Install Tools Manually**
 - [Terragrunt](https://terragrunt.gruntwork.io/docs/getting-started/install/)
 - [OpenTofu](https://opentofu.org/docs/intro/install/) (or [Terraform](https://developer.hashicorp.com/terraform/install))
@@ -108,6 +111,8 @@ For more information on how to use mise, read their [getting started guide](http
 - [kubectl](https://kubernetes.io/docs/tasks/tools/#kubectl)
 - [jq](https://jqlang.org/download/)
 - [ArgoCD CLI](https://argo-cd.readthedocs.io/en/stable/cli_installation/)
+- [Hubble CLI](https://docs.cilium.io/en/stable/observability/hubble/setup/#hubble-cli)
+- [Tailscale](https://tailscale.com/download)
 
 See [mise.toml](./mise.toml) and [mise.local.toml](./mise.local.toml) for specific versions.
 
