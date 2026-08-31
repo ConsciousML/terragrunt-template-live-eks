@@ -8,6 +8,9 @@ Perform the [quickstart](../README.md#getting-started) up to `Authenticate with 
 `TestStack` deploys the [staging EKS stack](../live/staging/eks/terragrunt.stack.hcl) end-to-end and validates:
 
 - The stack applies via `terragrunt apply --all`
+- Kubeconfig points at the deployed cluster
+- ArgoCD's app-of-apps is Synced and Healthy before checking any endpoint, failing fast if it
+  stalls for too long
 - Each tool's Route53 domain is reachable and, where the tool has an admin password in Secrets Manager, login succeeds:
   - ArgoCD (login)
   - Grafana (login)
@@ -46,10 +49,10 @@ A run can take a while end to end (see the wait budgets in `app_of_apps_wait_tes
 `staging_stack_test.go`). Pipe through `tee` to keep a log file for later debugging (a stall or
 failure) while still watching progress live in the terminal:
 ```bash
-go test -v -run TestStack ./tests/... -timeout 120m 2>&1 | tee test.log
+go test -v -run TestStack ./tests/... -timeout 120m 2>&1 | tee /tmp/test.log
 ```
 
-Assert only against an already-deployed stack (no apply or destroy):
+Test against an already-deployed stack (no apply or destroy):
 ```bash
 go test -v -run TestStackExists ./tests/... -timeout 10m
 ```
