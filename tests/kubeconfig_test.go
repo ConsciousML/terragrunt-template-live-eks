@@ -8,8 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// updateKubeconfig points kubectl at the deployed cluster so app_of_apps_wait_test.go
-// and printPodsAllNamespaces can reach it.
+// updateKubeconfig points kubectl at the deployed cluster for later kubectl-based checks.
 func updateKubeconfig(t *testing.T, allOutputs map[string]any, region string) {
 	t.Helper()
 

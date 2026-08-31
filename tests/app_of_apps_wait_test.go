@@ -2,7 +2,6 @@ package tests
 
 import (
 	"context"
-	"encoding/json"
 	"os/exec"
 	"testing"
 	"time"
@@ -10,10 +9,9 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// appOfAppsName is the ArgoCD Application resource created by the argocd_app_of_apps
-// catalog unit (values.name in terragrunt.stack.hcl). ArgoCD has a built-in health check
-// for the Application kind. This parent's health reflects the aggregate health of every
-// child Application it renders, so there's no need to enumerate them individually.
+// appOfAppsName is the ArgoCD Application from the argocd_app_of_apps catalog unit
+// (values.name in terragrunt.stack.hcl). Its health aggregates every child Application it
+// renders, so there's no need to enumerate them individually.
 const appOfAppsName = "app-of-apps"
 
 const (
@@ -26,40 +24,12 @@ const (
 	kubectlTimeout = 30 * time.Second
 )
 
-// stallDetector reports whether a state string has stayed the same for at least `after`.
-type stallDetector struct {
-	after      time.Duration
-	lastState  string
-	lastChange time.Time
-}
-
-func newStallDetector(after time.Duration) *stallDetector {
-	return &stallDetector{after: after, lastChange: time.Now()}
-}
-
-// Stalled records state and reports whether it has been unchanged for at least `after`.
-func (s *stallDetector) Stalled(state string) bool {
-	if state != s.lastState {
-		s.lastState, s.lastChange = state, time.Now()
-		return false
-	}
-	return time.Since(s.lastChange) >= s.after
-}
-
-type argoAppStatus struct {
-	Status struct {
-		Sync struct {
-			Status string `json:"status"`
-		} `json:"sync"`
-		Health struct {
-			Status string `json:"status"`
-		} `json:"health"`
-	} `json:"status"`
-}
-
 // waitForAppOfApps polls the app-of-apps Application until ArgoCD reports it Synced
 // and Healthy, meaning every child application it renders is also Synced and Healthy.
-// If the sync/health tuple doesn't change for appOfAppsStallAfter, it's considered stuck
+// Stall detection watches every Application in the argocd namespace, not just the
+// app-of-apps parent. The parent's own sync and health state can sit at OutOfSync and
+// Progressing for a while even as its children deploy normally one by one, so only
+// when no application's state changes for appOfAppsStallAfter is it considered stuck,
 // and the test fails early instead of burning the full retry budget.
 func waitForAppOfApps(t *testing.T) {
 	t.Helper()
@@ -67,14 +37,12 @@ func waitForAppOfApps(t *testing.T) {
 	stall := newStallDetector(appOfAppsStallAfter)
 
 	for attempt := 1; attempt <= appOfAppsRetries+1; attempt++ {
-		ctx, cancel := context.WithTimeout(context.Background(), kubectlTimeout)
-		out, err := exec.CommandContext(ctx, "kubectl", "get", "application", appOfAppsName, "-n", "argocd", "-o", "json").Output()
-		cancel()
+		list, err := listApps(t)
 		if err != nil {
-			t.Logf("[ERROR] kubectl get application %s attempt %d/%d failed: %v", appOfAppsName, attempt, appOfAppsRetries+1, err)
+			t.Logf("[ERROR] kubectl get application attempt %d/%d failed: %v", attempt, appOfAppsRetries+1, err)
 		} else {
-			var app argoAppStatus
-			require.NoError(t, json.Unmarshal(out, &app), "failed to unmarshal application %s json", appOfAppsName)
+			app, found := list.find(appOfAppsName)
+			require.True(t, found, "application %s not found in argocd namespace", appOfAppsName)
 
 			sync, health := app.Status.Sync.Status, app.Status.Health.Status
 			t.Logf("[INFO] app-of-apps attempt %d/%d: sync=%s health=%s", attempt, appOfAppsRetries+1, sync, health)
@@ -84,9 +52,10 @@ func waitForAppOfApps(t *testing.T) {
 				return
 			}
 
-			if stall.Stalled(sync + "/" + health) {
+			// check if stale: no app's state changed in appOfAppsStallAfter
+			if stall.Stalled(list.state()) {
 				printPodsAllNamespaces(t)
-				t.Fatalf("[ERROR] app-of-apps stuck at sync=%s health=%s for %s", sync, health, appOfAppsStallAfter)
+				t.Fatalf("[ERROR] app-of-apps stuck at sync=%s health=%s: no child application changed state for %s", sync, health, appOfAppsStallAfter)
 			}
 		}
 

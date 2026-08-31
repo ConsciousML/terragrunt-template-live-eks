@@ -16,18 +16,17 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// endpointRetries and endpointSleep bound how long each endpoint check waits for its tool to
-// become reachable. waitForAppOfApps already confirms every app Synced and Healthy before this
-// runs, so this budget only needs to cover DNS propagation and ALB/target-group lag behind that
-// health check, not app startup.
+// endpointRetries and endpointSleep bound how long each endpoint check waits for its tool
+// to become reachable. waitForAppOfApps already confirms every app is healthy, so this
+// budget only covers DNS propagation and ALB/target-group lag, not app startup.
 const (
 	endpointRetries = 30
 	endpointSleep   = 10 * time.Second
 )
 
-// endpointCheck describes one stack tool to verify after deploy. Entries with no secretUnit are
-// checked for plain reachability via validate; entries with a secretUnit fetch the password from
-// Secrets Manager and hand it to login instead. Add a new tool here to cover it going forward.
+// endpointCheck describes one stack tool to verify after deploy. An entry with no secretUnit
+// is checked for plain reachability via validate. One with a secretUnit fetches the password
+// from Secrets Manager and hands it to login instead. Add a new tool here to cover it.
 type endpointCheck struct {
 	name       string                                           // domain_name_<name> stack output
 	path       string                                           // path to poll, only used when secretUnit is empty
@@ -70,7 +69,7 @@ func TestStack(t *testing.T) {
 	require.NoError(t, err, "tailscale CLI not found in PATH — install it before running this test")
 
 	// Disconnect before apply to avoid racing the in-cluster connector's split-DNS route (see
-	// ci.yaml). Reconnected once the stack, and the connector, are up (reconnectTailscale below).
+	// ci.yaml). Reconnected once the stack and connector are up (reconnectTailscale below).
 	out, err := exec.Command("tailscale", "down").CombinedOutput()
 	require.NoError(t, err, "tailscale down: %s", strings.TrimSpace(string(out)))
 
@@ -186,14 +185,14 @@ func assertStack(t *testing.T, ctx context.Context, allOutputs map[string]any, r
 // testNoUnexpectedNetworkDrops asserts Cilium hasn't dropped any traffic beyond the
 // "Unsupported L3 protocol DROPPED (ICMPv6 RouterSolicitation)" noise this IPv4-only cluster
 // always produces regardless of policy (see docs/network-policies.md in the catalog repo).
-// hubble observe without -f reads the buffered flows and exits, no follow/timeout needed.
+// hubble observe without -f reads the buffered flows and exits, no follow flag or timeout needed.
 func testNoUnexpectedNetworkDrops(t *testing.T) {
 	t.Helper()
 
 	_, err := exec.LookPath("hubble")
 	require.NoError(t, err, "hubble CLI not found in PATH — install it before running this test")
 
-	// Only stdout carries flow lines, hubble logs warnings (e.g. CLI/relay version mismatch) to stderr.
+	// Only stdout carries flow lines, hubble logs warnings (e.g. CLI and relay version mismatch) to stderr.
 	out, err := exec.Command("hubble", "observe", "--verdict", "DROPPED", "-P").Output()
 	require.NoError(t, err, "hubble observe failed")
 

@@ -44,12 +44,12 @@ Deploy and test the full stack (apply + assert + destroy). A run can take a whil
 the wait budgets in `app_of_apps_wait_test.go` and `staging_stack_test.go`), so pipe through `tee`
 to keep a log file for debugging a stall or failure:
 ```bash
-go test -v -run TestStack ./tests/... -timeout 120m 2>&1 | tee /tmp/test.log
+go test -v -run '^TestStack$' ./tests/... -timeout 120m 2>&1 | tee /tmp/test.log
 ```
 
 Test against an already-deployed stack (no apply or destroy):
 ```bash
-go test -v -run TestStackExists ./tests/... -timeout 10m
+go test -v -run '^TestStackExists$' ./tests/... -timeout 10m
 ```
 
 ## Write a Test
