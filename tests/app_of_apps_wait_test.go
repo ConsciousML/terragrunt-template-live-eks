@@ -1,6 +1,7 @@
 package tests
 
 import (
+	"context"
 	"encoding/json"
 	"os/exec"
 	"testing"
@@ -19,6 +20,10 @@ const (
 	appOfAppsRetries    = 60
 	appOfAppsSleep      = 30 * time.Second
 	appOfAppsStallAfter = 10 * time.Minute
+
+	// kubectlTimeout bounds each individual kubectl call so a stuck API server can't
+	// hang the poll loop past a single attempt.
+	kubectlTimeout = 30 * time.Second
 )
 
 // stallDetector reports whether a state string has stayed the same for at least `after`.
@@ -62,7 +67,9 @@ func waitForAppOfApps(t *testing.T) {
 	stall := newStallDetector(appOfAppsStallAfter)
 
 	for attempt := 1; attempt <= appOfAppsRetries+1; attempt++ {
-		out, err := exec.Command("kubectl", "get", "application", appOfAppsName, "-n", "argocd", "-o", "json").Output()
+		ctx, cancel := context.WithTimeout(context.Background(), kubectlTimeout)
+		out, err := exec.CommandContext(ctx, "kubectl", "get", "application", appOfAppsName, "-n", "argocd", "-o", "json").Output()
+		cancel()
 		if err != nil {
 			t.Logf("[ERROR] kubectl get application %s attempt %d/%d failed: %v", appOfAppsName, attempt, appOfAppsRetries+1, err)
 		} else {
@@ -98,7 +105,10 @@ func waitForAppOfApps(t *testing.T) {
 func printPodsAllNamespaces(t *testing.T) {
 	t.Helper()
 
-	out, err := exec.Command("kubectl", "get", "pod", "-A").CombinedOutput()
+	ctx, cancel := context.WithTimeout(context.Background(), kubectlTimeout)
+	defer cancel()
+
+	out, err := exec.CommandContext(ctx, "kubectl", "get", "pod", "-A").CombinedOutput()
 	if err != nil {
 		t.Logf("[ERROR] kubectl get pod -A failed: %v: %s", err, out)
 		return
