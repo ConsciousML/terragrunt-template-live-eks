@@ -17,13 +17,12 @@ import (
 )
 
 // endpointRetries and endpointSleep bound how long each endpoint check waits for its tool to
-// become reachable. Budgeted at 30m to clear app-of-apps sync after apply, which can take ~20m.
-// reconnectEveryRetries cycles the Tailscale connection again after this many failed attempts,
-// in case the split-DNS route or connection went stale mid-poll.
+// become reachable. waitForAppOfApps already confirms every app Synced and Healthy before this
+// runs, so this budget only needs to cover DNS propagation and ALB/target-group lag behind that
+// health check, not app startup.
 const (
-	endpointRetries       = 60
-	endpointSleep         = 30 * time.Second
-	reconnectEveryRetries = 10
+	endpointRetries = 30
+	endpointSleep   = 10 * time.Second
 )
 
 // endpointCheck describes one stack tool to verify after deploy. Entries with no secretUnit are
@@ -132,8 +131,7 @@ func TestStackExists(t *testing.T) {
 }
 
 // pollUntilReady polls url until validate passes, sleeping sleepBetweenRetries between attempts
-// up to retries times. Every reconnectEveryRetries failed attempts it cycles Tailscale again,
-// covering the case where the split-DNS route or connection went stale mid-poll.
+// up to retries times.
 func pollUntilReady(t *testing.T, url string, retries int, sleepBetweenRetries time.Duration, validate func(int, string) bool) {
 	t.Helper()
 
@@ -151,11 +149,6 @@ func pollUntilReady(t *testing.T, url string, retries int, sleepBetweenRetries t
 
 		if attempt > retries {
 			break
-		}
-
-		if attempt%reconnectEveryRetries == 0 {
-			t.Logf("%s still unreachable after %d attempts, reconnecting tailscale", url, attempt)
-			reconnectTailscale(t)
 		}
 
 		time.Sleep(sleepBetweenRetries)
