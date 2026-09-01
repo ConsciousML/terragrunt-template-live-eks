@@ -41,6 +41,11 @@ while still down forces the client to reapply it once it comes back up.
 See `docs/environment-variables.md` in the catalog repo and `ci.yaml` for how CI sequences the
 same down and reconnect steps around its own apply and destroy.
 
+`tailscaled` runs as root, so a plain `tailscale up` or `down` from the unprivileged CI runner
+user fails with "prefs write access denied". `.github/actions/setup/action.yml` sets the runner
+as Tailscale operator right after connecting, so `TestStack` can reconnect without `sudo`. Locally
+your user is already the operator (or root), so this is a no-op.
+
 ## Run Terratest
 
 Setup the go module (the module is already initialized — run these if you are adding new dependencies):
