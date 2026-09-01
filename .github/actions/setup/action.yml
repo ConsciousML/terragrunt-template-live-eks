@@ -72,3 +72,10 @@ runs:
         # already passes --accept-routes itself, so use its dedicated input, not `args` (that
         # duplicated the flag and errored).
         accept-routes: true
+
+    # tailscaled runs as root. Without an operator, a later plain `tailscale up` or `down` as the
+    # runner user (Terratest's reconnect) fails with "prefs write access denied".
+    - name: Set runner as Tailscale operator
+      if: inputs.ts-oauth-client-id != ''
+      shell: bash
+      run: sudo tailscale set --operator=$USER
