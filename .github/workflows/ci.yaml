@@ -280,6 +280,7 @@ jobs:
           TAILSCALE_IDENTITY_TOKEN: ""
           TAILSCALE_OAUTH_CLIENT_ID: ${{ steps.ts-oauth-create.outputs.client_id }}
           TAILSCALE_OAUTH_CLIENT_SECRET: ${{ steps.ts-oauth-create.outputs.client_secret }}
+          EKS_LOCAL_ADMIN_ARN: ${{ secrets.EKS_LOCAL_ADMIN_ARN }}
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
         run: go test -v -run '^TestStack$' ./tests/... -timeout ${{ env.TERRATEST_TIMEOUT }}
 
