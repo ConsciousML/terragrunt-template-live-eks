@@ -81,7 +81,7 @@ func TestStack(t *testing.T) {
 		TerragruntArgs: []string{"--log-level", "error"},
 	}
 
-	defer terragrunt.DestroyAllContext(t, ctx, options)
+	// defer terragrunt.DestroyAllContext(t, ctx, options)
 
 	// Runs before the destroy defer above (LIFO) no matter what fails afterward. During destroy
 	// the tailscale operator is torn down partway through and stops serving the tunnel, so
