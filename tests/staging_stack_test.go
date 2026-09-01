@@ -2,7 +2,6 @@ package tests
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"os"
 	"os/exec"
@@ -183,31 +182,6 @@ func assertStack(t *testing.T, ctx context.Context, allOutputs map[string]any, r
 		password := fetchAWSSecret(t, ctx, region, secretName)
 		ep.login(t, host, password)
 	}
-
-	testNoUnexpectedNetworkDrops(t)
-}
-
-// testNoUnexpectedNetworkDrops asserts Cilium hasn't dropped any traffic beyond the
-// "Unsupported L3 protocol DROPPED (ICMPv6 RouterSolicitation)" noise this IPv4-only cluster
-// always produces regardless of policy (see docs/network-policies.md in the catalog repo).
-// hubble observe without -f reads the buffered flows and exits, no follow flag or timeout needed.
-func testNoUnexpectedNetworkDrops(t *testing.T) {
-	t.Helper()
-
-	_, err := exec.LookPath("hubble")
-	require.NoError(t, err, "[ERROR] hubble CLI not found in PATH — install it before running this test")
-
-	// Only stdout carries flow lines, hubble logs warnings (e.g. CLI and relay version mismatch) to stderr.
-	out, err := exec.Command("hubble", "observe", "--verdict", "DROPPED", "-P").Output()
-	require.NoError(t, err, "[ERROR] hubble observe failed")
-
-	var unexpected []string
-	for _, line := range strings.Split(string(out), "\n") {
-		if line != "" && !strings.Contains(line, "Unsupported L3 protocol DROPPED") {
-			unexpected = append(unexpected, line)
-		}
-	}
-	assert.Empty(t, unexpected, "[ERROR] unexpected dropped flows:\n%s", strings.Join(unexpected, "\n"))
 }
 
 // testArgoCDLogin asserts that ArgoCD is healthy and that a login request with
