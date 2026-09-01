@@ -81,9 +81,13 @@ func TestStack(t *testing.T) {
 		TerragruntArgs: []string{"--log-level", "error"},
 	}
 
-	// defer terragrunt.DestroyAllContext(t, ctx, options)
+	defer terragrunt.DestroyAllContext(t, ctx, options)
 
-	// Runs before the destroy defer above (LIFO) no matter what fails afterward. During destroy
+	// Runs before destroy (LIFO). Avoids "Required plugins are not installed"
+	// (gruntwork-io/terragrunt#1960) by forcing a fresh stack generate before destroy.
+	defer terragrunt.StackCleanContext(t, ctx, options)
+
+	// Runs before both defers above (LIFO) no matter what fails afterward. During destroy
 	// the tailscale operator is torn down partway through and stops serving the tunnel, so
 	// destroy must resolve the EKS API publicly rather than through the now-dead private route.
 	defer func() {
