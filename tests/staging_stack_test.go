@@ -120,7 +120,7 @@ func TestStack(t *testing.T) {
 //
 // Usage:
 //
-//	go test -v -run TestStackAssertions -timeout 10m
+//	go test -v -run TestStackExists -timeout 10m
 func TestStackExists(t *testing.T) {
 	if os.Getenv("GITHUB_ACTIONS") == "true" {
 		t.Skip("skipped in CI — run locally against an already-deployed stack")
