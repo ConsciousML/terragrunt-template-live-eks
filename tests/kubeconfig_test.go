@@ -1,0 +1,20 @@
+package tests
+
+import (
+	"bytes"
+	"os/exec"
+	"testing"
+
+	"github.com/stretchr/testify/require"
+)
+
+// updateKubeconfig points kubectl at the deployed cluster for later kubectl-based checks.
+func updateKubeconfig(t *testing.T, allOutputs map[string]any, region string) {
+	t.Helper()
+
+	clusterName := unitOutput(t, allOutputs, "cluster", "cluster_name")
+
+	out, err := exec.Command("aws", "eks", "update-kubeconfig", "--region", region, "--name", clusterName).CombinedOutput()
+	require.NoError(t, err, "[ERROR] aws eks update-kubeconfig: %s", bytes.TrimSpace(out))
+	t.Logf("[INFO] kubeconfig updated for cluster %s", clusterName)
+}

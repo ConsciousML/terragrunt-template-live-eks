@@ -21,7 +21,7 @@ permissions:
 
 env:
   # Timeout for testing infrastructure
-  TERRATEST_TIMEOUT: 60m
+  TERRATEST_TIMEOUT: 90m
 
 jobs:
   check-if-pr-is-draft:
@@ -118,6 +118,7 @@ jobs:
           TAILSCALE_OAUTH_CLIENT_ID: ${{ steps.ts-oauth-create.outputs.client_id }}
           TAILSCALE_OAUTH_CLIENT_SECRET: ${{ steps.ts-oauth-create.outputs.client_secret }}
           EKS_LOCAL_ADMIN_ARN: ${{ secrets.EKS_LOCAL_ADMIN_ARN }}
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
         run: |
           cd live/${{ matrix.env }}
           terragrunt stack generate
@@ -245,6 +246,14 @@ jobs:
           ts-audience: ${{ secrets.TS_AUDIENCE }}
           ts-tags: ${{ secrets.TS_TAGS }}
 
+      # The EKS API split-DNS route only works once the in-cluster Tailscale connector is up,
+      # which happens well after this job starts. Staying connected during the from-scratch apply
+      # races that: the Kubernetes and Helm providers can resolve the cluster hostname through
+      # Tailscale before the connector exists. Disconnect for the apply. Terratest reconnects
+      # (tailscale_reconnect_test.go) once the stack and connector are up.
+      - name: Disconnect Tailscale before cluster apply
+        run: sudo tailscale down
+
       - name: Request Tailscale API token using WIF credentials
         id: ts-token-exchange
         uses: ./.github/actions/tailscale-token-exchange
@@ -261,7 +270,7 @@ jobs:
           description: terratest-ci-${{ github.run_id }}
 
       # Use newly created OAuth client instead of WIF credentials
-      # WIF token expires after 10 min and terratest takes 30m+
+      # WIF token expires after 10 min and terratest can take up to TERRATEST_TIMEOUT
       # OAuth is a long lived credential but we delete it just after terratest
       - name: Ensure EC2 Spot service-linked role exists
         run: aws iam create-service-linked-role --aws-service-name spot.amazonaws.com || true
@@ -271,7 +280,9 @@ jobs:
           TAILSCALE_IDENTITY_TOKEN: ""
           TAILSCALE_OAUTH_CLIENT_ID: ${{ steps.ts-oauth-create.outputs.client_id }}
           TAILSCALE_OAUTH_CLIENT_SECRET: ${{ steps.ts-oauth-create.outputs.client_secret }}
-        run: go test -v -run TestStack ./tests/... -timeout ${{ env.TERRATEST_TIMEOUT }}
+          EKS_LOCAL_ADMIN_ARN: ${{ secrets.EKS_LOCAL_ADMIN_ARN }}
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+        run: go test -v -run '^TestStack$' ./tests/... -timeout ${{ env.TERRATEST_TIMEOUT }}
 
   revoke-oauth:
     # Revokes the temporary Tailscale OAuth client created during terratest.

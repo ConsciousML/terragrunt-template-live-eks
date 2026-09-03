@@ -110,15 +110,47 @@ jobs:
       - name: Ensure EC2 Spot service-linked role exists
         run: aws iam create-service-linked-role --aws-service-name spot.amazonaws.com || true
 
+      # Unlike staging's Terratest job, prod is a persistent cluster: it's usually already up
+      # and reachable through the existing Tailscale route, so the runner should stay connected
+      # (required once endpoint_public_access is disabled, see README "Disable the Public EKS
+      # Endpoint"). But on the very first prod apply the cluster (and its Tailscale connector)
+      # doesn't exist yet, and if the connector's split-DNS route ever goes stale, staying
+      # connected races or hangs the Kubernetes/Helm providers. Probe for the cluster first, then
+      # its API endpoint, and only disconnect if either is missing or unreachable, so the
+      # providers fall back to the public endpoint instead.
+      - name: Disconnect Tailscale if EKS API is unreachable
+        run: |
+          CLUSTER_NAME=$(grep -m1 'cluster_name ' live/cluster_name.hcl | sed -E 's/.*"(.*)".*/\1/')
+          ENVIRONMENT=$(grep -m1 '  environment ' live/prod/environment.hcl | sed -E 's/.*"(.*)".*/\1/')
+          CLUSTER_NAME_FULL="${ENVIRONMENT}-${CLUSTER_NAME}"
+
+          if ! aws eks describe-cluster --name "$CLUSTER_NAME_FULL" --region "${{ secrets.AWS_REGION }}" >/dev/null 2>&1; then
+            echo "Cluster '$CLUSTER_NAME_FULL' not found (first deploy), disconnecting Tailscale for this apply."
+            sudo tailscale down
+            exit 0
+          fi
+
+          ENDPOINT=$(aws eks describe-cluster --name "$CLUSTER_NAME_FULL" --region "${{ secrets.AWS_REGION }}" --query 'cluster.endpoint' --output text)
+          HOST=$(echo "$ENDPOINT" | sed -E 's#^https?://##')
+
+          # TCP connect check to $HOST:443, 5s timeout, no curl/nc dependency
+          if timeout 5 bash -c "cat < /dev/null > /dev/tcp/$HOST/443" 2>/dev/null; then
+            echo "EKS API reachable over the current Tailscale route, staying connected."
+          else
+            echo "EKS API unreachable over Tailscale (stale split-DNS route), disconnecting for this apply."
+            sudo tailscale down
+          fi
+
       - name: Terragrunt apply on prod
         env:
           TAILSCALE_IDENTITY_TOKEN: ""
           TAILSCALE_OAUTH_CLIENT_ID: ${{ steps.ts-oauth-create.outputs.client_id }}
           TAILSCALE_OAUTH_CLIENT_SECRET: ${{ steps.ts-oauth-create.outputs.client_secret }}
           EKS_LOCAL_ADMIN_ARN: ${{ secrets.EKS_LOCAL_ADMIN_ARN }}
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
         run: |
           cd live/prod
-          terragrunt stack run init
+          terragrunt stack generate
           terragrunt run --all apply --backend-bootstrap --non-interactive --no-stack-generate
 
   revoke-oauth:

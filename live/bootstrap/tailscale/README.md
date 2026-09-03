@@ -20,6 +20,6 @@ Run once before running Terratest in CI:
 ```bash
 source .env
 cd live/bootstrap/tailscale
-terragrunt stack run init
+terragrunt stack generate
 terragrunt run --all apply --backend-bootstrap --non-interactive --no-stack-generate
 ```

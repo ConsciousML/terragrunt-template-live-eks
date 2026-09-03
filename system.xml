@@ -78,9 +78,16 @@
           `staging` or `prod` cluster
     </documentation_map>
 
+    <commits>
+        Conventional Commits (`feat:`, `fix:`, `docs:`, `test:`, `revert:`, optional scope like
+        `fix(ci):`). Subject line only, no body.
+    </commits>
+
     <restrictions>
         - Skip `.terraform*` and `.terragrunt*` dirs when searching or reading, generated caches
-        - Read sources directly instead of spawning Explore or Task agents
+        - Read sources directly instead of spawning Explore or Task agents. This applies even in
+          plan mode, whose own workflow suggests Explore agents. This rule overrides that
+          suggestion.
     </restrictions>
 
     <instructions>

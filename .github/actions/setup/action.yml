@@ -36,6 +36,9 @@ runs:
       with:
         role-to-assume: ${{ inputs.role-to-assume }}
         aws-region: ${{ inputs.aws-region }}
+        # Default STS session is 1h. TestStack's apply and destroy run past that,
+        # expiring the token mid-teardown. Role's max_session_duration must rise too.
+        role-duration-seconds: 9000
 
     # Mise installs all required tools (Terragrunt, OpenTofu, Go, Python, ...)
     # See `mise.toml`.
@@ -64,3 +67,15 @@ runs:
         oauth-client-id: ${{ inputs.ts-oauth-client-id }}
         audience: ${{ inputs.ts-audience }}
         tags: ${{ inputs.ts-tags }}
+        # Linux rejects advertised subnet routes by default (unlike macOS/Windows), so without
+        # this the runner can never reach anything behind the Tailscale connector. The action
+        # already passes --accept-routes itself, so use its dedicated input, not `args` (that
+        # duplicated the flag and errored).
+        accept-routes: true
+
+    # tailscaled runs as root. Without an operator, a later plain `tailscale up` or `down` as the
+    # runner user (Terratest's reconnect) fails with "prefs write access denied".
+    - name: Set runner as Tailscale operator
+      if: inputs.ts-oauth-client-id != ''
+      shell: bash
+      run: sudo tailscale set --operator=$USER

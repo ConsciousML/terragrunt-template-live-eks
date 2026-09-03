@@ -35,7 +35,7 @@ Re-apply the Tailscale bootstrap to register the new CIDR in `autoApprovers`. Se
 ```bash
 source .env
 cd live/bootstrap/tailscale
-terragrunt stack run init
+terragrunt stack generate
 terragrunt run --all apply --backend-bootstrap --non-interactive --no-stack-generate
 ```
 
@@ -87,11 +87,15 @@ locals {
 
 Update `live/pre-staging/region.hcl` if the new environment targets a different AWS region.
 
-### 6. Deploy the EKS stack
+### 6. Revisit EC2 quotas
+
+The new environment's node groups add to the account's total vCPU usage. Check whether the catalog repo's [`aws_service_quotas` bootstrap](https://github.com/ConsciousML/terragrunt-template-catalog-eks/blob/main/pipelines/bootstrap/aws_service_quotas/README.md) still covers it before deploying.
+
+### 7. Deploy the EKS stack
 
 ```bash
 source .env
 cd live/pre-staging/eks/stack
-terragrunt stack run init
+terragrunt stack generate
 terragrunt run --all apply --backend-bootstrap --non-interactive --no-stack-generate
 ```

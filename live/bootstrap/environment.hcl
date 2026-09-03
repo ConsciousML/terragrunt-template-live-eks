@@ -1,3 +1,4 @@
 locals {
-  environment = "bootstrap-live-eks"
+  environment       = "bootstrap-live-eks"
+  environment_alias = "staging"
 }

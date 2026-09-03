@@ -5,6 +5,7 @@ import (
 	"os/exec"
 	"runtime"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 )
@@ -15,15 +16,22 @@ import (
 func reconnectTailscale(t *testing.T) {
 	t.Helper()
 
-	out, err := exec.Command("sudo", "tailscale", "down").CombinedOutput()
-	require.NoError(t, err, "tailscale down: %s", bytes.TrimSpace(out))
-	t.Log("tailscale down")
+	out, err := exec.Command("tailscale", "down").CombinedOutput()
+	require.NoError(t, err, "[ERROR] tailscale down: %s", bytes.TrimSpace(out))
+	t.Logf("[INFO] tailscale down: %s", bytes.TrimSpace(out))
 
 	flushDNSCache(t)
 
-	out, err = exec.Command("sudo", "tailscale", "up").CombinedOutput()
-	require.NoError(t, err, "tailscale up: %s", bytes.TrimSpace(out))
-	t.Log("tailscale up")
+	out, err = exec.Command("tailscale", "up").CombinedOutput()
+	require.NoError(t, err, "[ERROR] tailscale up: %s", bytes.TrimSpace(out))
+	t.Logf("[INFO] tailscale up: %s", bytes.TrimSpace(out))
+
+	// let the backend settle before checking status.
+	time.Sleep(2 * time.Second)
+
+	out, err = exec.Command("tailscale", "status").CombinedOutput()
+	require.NoError(t, err, "[ERROR] tailscale status: %s", bytes.TrimSpace(out))
+	t.Logf("[INFO] tailscale status: %s", bytes.TrimSpace(out))
 }
 
 // flushDNSCache clears the OS DNS cache on macOS and Linux. Failures are logged
@@ -35,21 +43,26 @@ func flushDNSCache(t *testing.T) {
 	case "darwin":
 		cmds = [][]string{
 			{"dscacheutil", "-flushcache"},
+			// macOS doesn't reliably re-push DNS config on a plain down/up cycle.
+			// Toggling accept-dns while still down forces the client to reapply it
+			// once it comes back up.
+			{"tailscale", "set", "--accept-dns=false"},
+			{"tailscale", "set", "--accept-dns=true"},
 		}
 	case "linux":
 		cmds = [][]string{
-			{"sudo", "resolvectl", "flush-caches"},
+			{"resolvectl", "flush-caches"},
 		}
 	default:
-		t.Logf("flushDNSCache: unsupported platform %s, skipping", runtime.GOOS)
+		t.Logf("[INFO] flushDNSCache: unsupported platform %s, skipping", runtime.GOOS)
 		return
 	}
 	for _, args := range cmds {
 		out, err := exec.Command(args[0], args[1:]...).CombinedOutput()
 		if err != nil {
-			t.Logf("flushDNSCache: %v: %s (non-fatal)", args, bytes.TrimSpace(out))
+			t.Logf("[ERROR] flushDNSCache: %v: %s (non-fatal)", args, bytes.TrimSpace(out))
 		} else {
-			t.Logf("flushDNSCache: %v: ok", args)
+			t.Logf("[INFO] flushDNSCache: %v: ok", args)
 		}
 	}
 }
