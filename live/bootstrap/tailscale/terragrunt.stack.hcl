@@ -1,8 +1,8 @@
 locals {
-  version = "v0.1.6"
+  version = "v0.1.7"
 
   github_locals            = read_terragrunt_config(find_in_parent_folders("github.hcl")).locals
-  github_username_live     = local.github_locals.github_username_live
+  github_owner_live        = local.github_locals.github_owner_live
   github_repo_name_live    = local.github_locals.github_repo_name_live
   github_owner_catalog     = local.github_locals.github_owner_catalog
   github_repo_name_catalog = local.github_locals.github_repo_name_catalog
@@ -16,7 +16,7 @@ stack "tailscale_wif" {
 
   values = {
     version          = local.version
-    github_owner     = local.github_username_live
+    github_owner     = local.github_owner_live
     github_repo_name = local.github_repo_name_live
     github_token     = get_env("GITHUB_TOKEN")
     issuer           = "https://token.actions.githubusercontent.com"

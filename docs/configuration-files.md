@@ -3,7 +3,7 @@
 ```
 live/
 ├── root.hcl                    S3 backend + AWS provider, inherited by all units
-├── github.hcl                  GitHub repo names for module sources
+├── github.hcl                  GitHub owners and repo names for module sources
 ├── dns.hcl                     Base domain + per-app subdomains
 ├── network.hcl                 Per-environment VPC CIDR blocks + VPC endpoint CIDR maps
 ├── cluster_name.hcl            EKS cluster name stem
