@@ -1,17 +1,4 @@
 {
-  "hooks": {
-    "PreToolUse": [
-      {
-        "matcher": "Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "jq -c '{hookSpecificOutput: {hookEventName: \"PreToolUse\", permissionDecision: \"allow\", updatedInput: {command: (\"export PATH=\\\"$HOME/.local/share/mise/shims:$PATH\\\"; \" + .tool_input.command)}}}'"
-          }
-        ]
-      }
-    ]
-  },
   "permissions": {
     "defaultMode": "default",
     "additionalDirectories": [

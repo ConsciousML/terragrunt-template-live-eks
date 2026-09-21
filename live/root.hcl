@@ -11,6 +11,7 @@ locals {
 
   github_locals                = read_terragrunt_config(find_in_parent_folders("github.hcl")).locals
   github_owner_catalog         = local.github_locals.github_owner_catalog
+  github_owner_app_of_apps     = local.github_locals.github_owner_app_of_apps
   github_repo_name_catalog     = local.github_locals.github_repo_name_catalog
   github_repo_name_app_of_apps = local.github_locals.github_repo_name_app_of_apps
 }

@@ -49,17 +49,20 @@ Follow the getting started of the [EKS catalog repository](https://github.com/Co
 2. Under `Repository Name`, choose a name for your repository.
 
 ### Configuration
-1. In `live/github.hcl`, modify (by replacing `<YourGitHubUsernameOrOrgName>`, `<your-catalog-repo-name>`, and `<your-live-repo-name>`):
+1. In `live/github.hcl`, modify (by replacing the `<...>` placeholders):
 ```hcl
 locals {
-  github_owner_catalog         = "<YourGitHubUsernameOrOrgName>"
-  github_username_live         = "<YourUsernameWhereYourLiveForkIs>"
+  github_owner_catalog         = "<YourUsernameWhereYourCatalogForkIs>"
+  github_owner_live            = "<YourUsernameWhereYourLiveForkIs>"
+  github_owner_app_of_apps     = "<YourUsernameWhereYourAppOfAppsForkIs>"
   github_repo_name_catalog     = "<your-catalog-repo-name>"
   github_repo_name_live        = "<your-live-repo-name>"
   github_repo_name_app_of_apps = "<your-app-of-apps-repo-name>"
 }
 ```
-If you've forked all three repositories, `github_owner_catalog` and `github_username_live` should point to your username (`ConsciousML` for my own forks).
+If you've forked all three repositories, all three owners should point to your username (`ConsciousML` for my own forks).
+
+Each repository has its own owner. If you haven't forked `argocd-app-of-apps-template`, keep `github_owner_app_of_apps` as `ConsciousML` and the upstream one is used.
 
 `<your-live-repo-name>` should be the same name you chose in the previous section, `<your-catalog-repo-name>` should be the name you chose in the `### Fork the Repository` section of the [catalog repository](https://github.com/ConsciousML/terragrunt-template-catalog-eks/blob/main/README.md#fork-the-repository), and `<your-app-of-apps-repo-name>` should match your fork of [argocd-app-of-apps-template](https://github.com/ConsciousML/argocd-app-of-apps-template).
 
