@@ -1,25 +1,13 @@
-# Tailscale Bootstrap
+{/* This doc is aggregated into the EKS Forge documentation site: https://eks-forge.readthedocs.io/latest/. It is not meant to be read directly in this repository. */}
+### Tailscale
+This pipeline lets your live fork's CI authenticate to Tailscale. It reuses the tailnet ACL applied from your catalog fork.
 
-Creates a Tailscale WIF credential and writes `TS_OAUTH_CLIENT_ID`, `TS_AUDIENCE`, and `TS_TAGS` to the live repo's GitHub secrets so CI can authenticate to Tailscale during Terratest runs.
-
-See the [catalog README](https://github.com/ConsciousML/terragrunt-template-catalog-eks/blob/main/pipelines/bootstrap/tailscale/README.md) for the full Tailscale setup flow.
-
-## Prerequisites
-
-Perform the [quickstart](../../../README.md#getting-started) up to `Authenticate with AWS` (included).
-
-Create an account and login at [https://login.tailscale.com/admin/welcome](https://login.tailscale.com/admin/welcome).
-
-Download and install the [Tailscale client](https://tailscale.com/download).
-
-Set up `GITHUB_TOKEN`, `TAILSCALE_OAUTH_CLIENT_ID`, and `TAILSCALE_OAUTH_CLIENT_SECRET` following the [environment variables guide](https://github.com/ConsciousML/terragrunt-template-catalog-eks/blob/main/docs/environment-variables.md).
-
-## Deploy
-Run once before running Terratest in CI:
-
+From the root of your live fork, run:
 ```bash
 source .env
 cd live/bootstrap/tailscale
 terragrunt stack generate
 terragrunt run --all apply --backend-bootstrap --non-interactive --no-stack-generate
 ```
+
+For more information, read the [Tailscale quickstart](/docs/quickstart/bootstrap/tailscale/).

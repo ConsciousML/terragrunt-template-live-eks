@@ -1,22 +1,13 @@
-# AWS GitHub Actions Auth
+{/* This doc is aggregated into the EKS Forge documentation site: https://eks-forge.readthedocs.io/latest/. It is not meant to be read directly in this repository. */}
+### AWS GitHub Actions Authentication
+This pipeline lets your live fork's CI/CD authenticate with AWS. It reuses the OIDC provider created from your catalog fork.
 
-Sets up GitHub OIDC authentication with AWS and creates an IAM role for GitHub Actions. Also provisions deploy keys and GitHub secrets (`AWS_REGION`, `AWS_ROLE_ARN`, `DEPLOY_KEY_TG_CATALOG`, `DEPLOY_KEY_TG_LIVE`) so CI can authenticate to AWS and clone private repos. 
-
-See the [catalog README](https://github.com/ConsciousML/terragrunt-template-catalog-eks/blob/main/pipelines/bootstrap/aws_gh_actions_auth/README.md) for architecture details.
-
-## Prerequisites
-
-Perform the [quickstart](../../../README.md#getting-started) up to `Authenticate with AWS` (included).
-
-Set up `GITHUB_TOKEN` following the [environment variables guide](https://github.com/ConsciousML/terragrunt-template-catalog-eks/blob/main/docs/environment-variables.md).
-
-## Deploy
-
-Run once before CI/CD is operational:
-
+From the root of your live fork, run:
 ```bash
 source .env
 cd live/bootstrap/aws_gh_actions_auth
 terragrunt stack generate
 terragrunt run --all apply --backend-bootstrap --non-interactive --no-stack-generate
 ```
+
+For more information, read the [AWS GitHub Actions Authentication quickstart](/docs/quickstart/bootstrap/aws_gh_actions_auth/).

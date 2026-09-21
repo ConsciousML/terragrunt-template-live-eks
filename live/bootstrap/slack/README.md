@@ -1,37 +1,8 @@
-# Slack Bootstrap
+{/* This doc is aggregated into the EKS Forge documentation site: https://eks-forge.readthedocs.io/latest/. It is not meant to be read directly in this repository. */}
+### Slack
+This pipeline adds your Slack bot token to your live fork's GitHub secrets and creates the `staging` and `prod` alert channels.
 
-Registers the Slack bot token as a GitHub Actions secret, and creates each environment's Slack channels that CI-deployed Alertmanager instances post to.
-
-See the [catalog README](https://github.com/ConsciousML/terragrunt-template-catalog-eks/blob/main/pipelines/bootstrap/slack/README.md) for the full Slack app setup flow.
-
-## Structure
-
-```
-live/bootstrap/slack/
-  gh_secret/
-    terragrunt.stack.hcl
-  channels.hcl
-  channels/
-    staging/
-      environment.hcl        ← environment = "staging"
-      stack/
-        terragrunt.stack.hcl
-    prod/
-      environment.hcl        ← environment = "prod"
-      stack/
-        terragrunt.stack.hcl
-```
-
-## Prerequisites
-
-Perform the [quickstart](../../../README.md#getting-started) up to `Authenticate with AWS` (included).
-
-Create a Slack app following the catalog README linked above, then set up `GITHUB_TOKEN` and `SLACK_BOT_TOKEN` following the [environment variables guide](https://github.com/ConsciousML/terragrunt-template-catalog-eks/blob/main/docs/environment-variables.md).
-
-## Deploy
-
-Run `gh_secret` once, it's environment-independent:
-
+From the root of your live fork, run the `gh_secret` stack once:
 ```bash
 source .env
 cd live/bootstrap/slack/gh_secret
@@ -39,8 +10,7 @@ terragrunt stack generate
 terragrunt run --all apply --backend-bootstrap --non-interactive --no-stack-generate
 ```
 
-Repeat the following for each environment (replacing `<environment>` by `staging` and then by `prod`):
-
+Then, from the root of your live fork, run the following for each environment (replacing `<environment>` with `staging` and then `prod`):
 ```bash
 source .env
 cd live/bootstrap/slack/channels/<environment>/stack
@@ -48,8 +18,4 @@ terragrunt stack generate
 terragrunt run --all apply --backend-bootstrap --non-interactive --no-stack-generate
 ```
 
-The bot is a member of each channel it creates by default, but you aren't. Join them from the Slack client following the catalog README's instructions.
-
-## Module Details
-
-See the [`units/slack`](https://github.com/ConsciousML/terragrunt-template-catalog-eks/blob/main/units/slack/README.md) group README for what each unit provisions and how they compose.
+Finally, join the `staging-` and `prod-` prefixed channels, as you did for the `dev-` ones in the [Slack quickstart](/docs/quickstart/bootstrap/slack/) (see [`live/bootstrap/slack/channels.hcl`](channels.hcl) for the base names).

@@ -39,39 +39,6 @@ You're new to Terragrunt best practices? Read [Gruntwork's official production p
 
 Follow the [deployment documentation](https://eks-forge.readthedocs.io/latest/docs/deployment/).
 
-### Configuration
-1. In `live/github.hcl`, modify (by replacing the `<...>` placeholders):
-```hcl
-locals {
-  github_owner_catalog         = "<YourUsernameWhereYourCatalogForkIs>"
-  github_owner_live            = "<YourUsernameWhereYourLiveForkIs>"
-  github_owner_app_of_apps     = "<YourUsernameWhereYourAppOfAppsForkIs>"
-  github_repo_name_catalog     = "<your-catalog-repo-name>"
-  github_repo_name_live        = "<your-live-repo-name>"
-  github_repo_name_app_of_apps = "<your-app-of-apps-repo-name>"
-}
-```
-If you've forked all three repositories, all three owners should point to your username (`ConsciousML` for my own forks).
-
-Each repository has its own owner. If you haven't forked `argocd-app-of-apps-template`, keep `github_owner_app_of_apps` as `ConsciousML` and the upstream one is used.
-
-`<your-live-repo-name>` should be the same name you chose in the previous section, `<your-catalog-repo-name>` should be the name you chose in the `### Fork the Repository` section of the [catalog repository](https://github.com/ConsciousML/terragrunt-template-catalog-eks/blob/main/README.md#fork-the-repository), and `<your-app-of-apps-repo-name>` should match your fork of [argocd-app-of-apps-template](https://github.com/ConsciousML/argocd-app-of-apps-template).
-
-2. Change each `live/*/region.hcl` to match your desired AWS region.
-
-3. Set `TAILSCALE_OAUTH_CLIENT_ID` and `TAILSCALE_OAUTH_CLIENT_SECRET` in your `.env` (see the [environment variables guide](docs/environment-variables.md))
-
-4. Karpenter's `elastic` NodePool provisions `spot` instances and is capped by default. Raise `limits_cpu` or switch `karpenter.sh/capacity-type` to `on-demand` in the [staging](live/staging/eks/stack/terragrunt.stack.hcl) and [prod](live/prod/eks/stack/terragrunt.stack.hcl) EKS stacks for production stability.
-
-### Run the Bootstrap Pipelines
-Run the [bootstrap pipelines](live/bootstrap/README.md) once, required before anything else in this repo.
-
-Also run the following once per AWS account:
-```bash
-aws iam create-service-linked-role --aws-service-name spot.amazonaws.com || true
-```
-This creates the EC2 Spot service-linked role required for Karpenter to provision spot instances.
-
 ### Deploy a Staging EKS Cluster
 Deploy the [EKS Cluster Stack](https://github.com/ConsciousML/terragrunt-template-catalog-eks/blob/main/units/eks/README.md):
 

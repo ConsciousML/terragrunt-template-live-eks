@@ -1,50 +1,49 @@
-# DNS Bootstrap
+{/* This doc is aggregated into the EKS Forge documentation site: https://eks-forge.readthedocs.io/latest/. It is not meant to be read directly in this repository. */}
+### Setup DNS
+This pipeline creates a public hosted zone for `staging` and for `prod`.
 
-Creates a public Route 53 hosted zone per environment.
-
-See the [catalog README](https://github.com/ConsciousML/terragrunt-template-catalog-eks/blob/main/pipelines/bootstrap/setup_dns/README.md) for the full DNS flow and zone purpose.
-
-## Structure
-
-```
-live/bootstrap/setup_dns/
-  staging/
-    environment.hcl        ← environment = "staging"
-    stack/
-      terragrunt.stack.hcl
-  prod/
-    environment.hcl        ← environment = "prod"
-    stack/
-      terragrunt.stack.hcl
+In [`live/dns.hcl`](../../dns.hcl), set `base_domain` to the domain you used in the catalog:
+```hcl
+locals {
+  base_domain = "yourdomain.com"
+  ...
+}
 ```
 
-## Prerequisites
+:::info
+Each subdirectory provisions its own hosted zone, giving that environment its own subdomain (e.g. `staging.yourdomain.com`):
+```
+setup_dns/
+├── staging/
+└── prod/
+```
+:::
 
-Perform the [quickstart](../../../README.md#getting-started) up to `Authenticate with AWS` (included).
-
-## Deploy
-
-Repeat the following for each environment (replacing `<environment>` by `staging` and then by `prod`):
-
+Next, run the following for each environment (replacing `<environment>` with `staging` and then `prod`), from the root of your live fork:
 ```bash
-source .env
 cd live/bootstrap/setup_dns/<environment>/stack
 terragrunt stack generate
 terragrunt run --all apply --backend-bootstrap --non-interactive --no-stack-generate
-```
-
-
-Retrieve the 4 nameservers from the output:
-
-```bash
 terragrunt stack output --json setup_dns.route53_hosted_zone.name_servers
 ```
 
-### Delegate the subdomain
+You should see something similar to:
+```txt
+{
+  "setup_dns": {
+    "route53_hosted_zone": {
+      "name_servers": [
+        "<nameserver_1>",
+        "<nameserver_2>",
+        "<nameserver_3>",
+        "<nameserver_4>",
+      ]
+    }
+  }
+}
+```
 
-Repeat the following for each environment.
-
-In your domain registrar, add 4 NS records for the environment zone using the nameservers from the output above.
+For each environment, add 4 NS records for the environment subdomain in your domain registrar, using the nameservers from the output:
 
 | Type | Host | Value |
 |------|------|-------|
@@ -53,12 +52,11 @@ In your domain registrar, add 4 NS records for the environment zone using the na
 | NS | `<environment>` | `ns-789.awsdns-56.org` |
 | NS | `<environment>` | `ns-012.awsdns-78.co.uk` |
 
-Replace `<environment>` with your actual environment (`staging` or `prod`).
-
-### Verify propagation
-
+Verify that the NS records are propagated for each environment:
 ```bash
-dig NS staging.axelmendoza.com
+dig NS <environment>.yourdomain.com
 ```
 
-Delegation is working when 4 AWS nameservers appear in the `ANSWER SECTION`. With delegation in place, deploy the EKS stack — ACM validation, private zone creation, and ExternalDNS are all handled automatically.
+Delegation is working when 4 AWS nameservers appear in the `ANSWER SECTION`.
+
+For more information, read the [Setup DNS quickstart](/docs/quickstart/bootstrap/setup_dns/).
