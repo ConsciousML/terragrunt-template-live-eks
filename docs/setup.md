@@ -12,6 +12,10 @@ Like the catalog, it's meant to be forked and extended.
 
 Follow the same steps as when you [forked the catalog](/docs/quickstart/installation/#fork-the-eks-forge-catalog). First, [create an empty repository](https://github.com/new) on GitHub, private or public. Leave the README, `.gitignore`, and license options unset.
 
+:::warning
+Create it under the same GitHub owner (user or organization) as your catalog fork. The [bootstrap pipelines](#bootstrap) write GitHub secrets and deploy keys under the catalog fork's owner.
+:::
+
 Then, set your GitHub owner (user or organization) and the name of the repository you created, by replacing the `<...>`:
 ```bash
 export GITHUB_OWNER=<your-github-owner>
@@ -35,13 +39,14 @@ Live uses [mise-en-place](https://mise.jdx.dev/) like the catalog, with a slight
 ## Live Configuration
 Live reads `.hcl` configuration files under [`live/`](../live/), like the catalog's `pipelines/`. They point to the catalog's [units](/docs/iac/#units), so `staging` and `prod` use the same components you deployed in [`dev`](/docs/iac/#dev).
 
-Edit [`live/github.hcl`](../live/github.hcl) by replacing the `<...>`:
+In [`live/github.hcl`](../live/github.hcl), set these four values and leave the others as is:
 ```hcl
 locals {
   github_owner_catalog         = "<your-github-username-or-org-name-where-your-catalog-fork-is>"
   github_owner_live            = "<your-github-username-or-org-name-where-your-live-fork-is>"
   github_repo_name_catalog     = "<your-catalog-repo-name>"
   github_repo_name_live        = "<your-live-repo-name>"
+  ...
 }
 ```
 This makes your live fork use the modules and units of your catalog fork instead of the original catalog repository.
@@ -63,13 +68,13 @@ The `bootstrap` file has no `azs`, so you only need to set `region`.
 You can also leave them as is if you plan to use `us-east-1`.
 
 ## Bootstrap
-Run the bootstrap pipelines once from your [live fork](/docs/deployment/live-repository-setup/#fork-the-live-repository), as you did from your [catalog fork](/docs/quickstart/installation/#fork-the-eks-forge-catalog) in the [quickstart bootstrap](/docs/quickstart/bootstrap/).
+:::warning
+These pipelines need to run only once per live fork before deploying to [`staging`](/docs/deployment/deploy-to-staging/) and [`prod`](/docs/deployment/promote-to-production/).
+:::
+
+We'll run the bootstrap pipelines from your live fork, as you did from your [catalog fork](/docs/quickstart/installation/#fork-the-eks-forge-catalog) in the [quickstart bootstrap](/docs/quickstart/bootstrap/).
 
 They read the same environment variables as the catalog. Copy your catalog `.env` to the root of your live fork:
 ```bash
 cp <path-to-your-catalog-fork>/.env .env
 ```
-
-:::warning
-These pipelines need to be performed only once per live fork before deploying to [`staging`](/docs/deployment/deploy-to-staging/) and [`prod`](/docs/deployment/promote-to-production/).
-:::

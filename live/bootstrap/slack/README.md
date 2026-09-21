@@ -2,18 +2,10 @@
 ### Slack
 This pipeline adds your Slack bot token to your live fork's GitHub secrets and creates the `staging` and `prod` alert channels.
 
-From the root of your live fork, run the `gh_secret` stack once:
+From the root of your live fork, run:
 ```bash
 source .env
-cd live/bootstrap/slack/gh_secret
-terragrunt stack generate
-terragrunt run --all apply --backend-bootstrap --non-interactive --no-stack-generate
-```
-
-Then, from the root of your live fork, run the following for each environment (replacing `<environment>` with `staging` and then `prod`):
-```bash
-source .env
-cd live/bootstrap/slack/channels/<environment>/stack
+cd live/bootstrap/slack
 terragrunt stack generate
 terragrunt run --all apply --backend-bootstrap --non-interactive --no-stack-generate
 ```
