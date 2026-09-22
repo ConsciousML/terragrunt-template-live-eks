@@ -1,5 +1,5 @@
 locals {
-  version = "v0.1.8"
+  version = "v0.1.9"
 
   github_locals            = read_terragrunt_config(find_in_parent_folders("github.hcl")).locals
   github_owner_catalog     = local.github_locals.github_owner_catalog
@@ -14,9 +14,11 @@ stack "slack_channels" {
   path   = "slack_channels"
 
   values = {
-    version       = local.version
-    bot_token     = get_env("SLACK_BOT_TOKEN")
-    environment   = local.environment
-    channel_names = local.channel_names
+    version                  = local.version
+    github_owner_catalog     = local.github_owner_catalog
+    github_repo_name_catalog = local.github_repo_name_catalog
+    bot_token                = get_env("SLACK_BOT_TOKEN")
+    environment              = local.environment
+    channel_names            = local.channel_names
   }
 }
