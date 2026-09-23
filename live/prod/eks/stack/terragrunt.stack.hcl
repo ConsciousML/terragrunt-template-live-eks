@@ -1,5 +1,5 @@
 locals {
-  version_catalog     = "v0.1.9"
+  version_catalog     = "v0.1.9.1"
   version_vpc         = "6.6.0"
   version_cluster     = "21.15.1"
   version_aws_lbc     = "3.2.1"
@@ -10,10 +10,11 @@ locals {
   version_karpenter_helm           = "1.14.0"
   version_prometheus_operator_crds = "30.0.1"
   version_s3                       = "5.15.1"
+  version_cilium                   = "1.20.0"
 
   # PROD: pinned to a release tag instead of dev's "refs/heads/main", so app-of-apps tracks a
   # fixed catalog version instead of the latest commit on main.
-  app_of_apps_target_revision = "v0.1.3"
+  app_of_apps_target_revision = "v0.1.4"
 
   github_locals            = read_terragrunt_config(find_in_parent_folders("github.hcl")).locals
   github_owner_catalog     = local.github_locals.github_owner_catalog
@@ -79,6 +80,17 @@ locals {
       key      = "karpenter.k8s.aws/instance-memory"
       operator = "Gt"
       values   = ["4095"]
+    }
+  ]
+
+  # Holds pods off a new Karpenter node until cilium-agent is ready there, otherwise they get
+  # an IP from vpc-cni but no CiliumEndpoint and are treated as `world` by every policy.
+  # cilium-operator (on the MNG) removes it. See https://docs.cilium.io/en/latest/installation/taints/
+  karpenter_node_pool_startup_taints = [
+    {
+      key    = "node.cilium.io/agent-not-ready"
+      value  = "true"
+      effect = "NoExecute"
     }
   ]
 
@@ -261,8 +273,7 @@ unit "cluster" {
             # Prefix delegation: nodes need more IPs than one-per-ENI allows
             ENABLE_PREFIX_DELEGATION = "true"
           }
-          # Policy enforcement moved to Cilium (chaining mode), see charts/cilium in
-          # argocd-app-of-apps-template.
+          # Policy enforcement moved to Cilium (chaining mode), see the cilium unit below.
           enableNetworkPolicy = "false"
           # aws-node container. No CPU limit: it programs the node's CNI config, throttling it
           # breaks pod sandbox create/delete for every pod scheduled on the node.
@@ -303,7 +314,8 @@ unit "cluster" {
           http_endpoint               = "enabled"
         }
 
-        # Reserves the MNG for pods that tolerate it (Karpenter's controller).
+        # Reserves the MNG for pods that tolerate it (Karpenter's controller, cilium-operator,
+        # Hubble Relay and UI, the cilium_cep_restart Job).
         # The taint alone doesn't attract those pods, mng_node_selector also needs this label.
         labels = local.mng_node_selector
 
@@ -759,6 +771,176 @@ unit "tailscale_split_dns_eks_endpoint" {
   }
 }
 
+# --- Cilium ---
+# Installed on the MNG before Karpenter: Karpenter nodes carry Cilium's agent-not-ready startup
+# taint, and cilium-operator (which removes it) can't depend on a Karpenter node.
+
+unit "cilium" {
+  source = "github.com/${local.github_owner_catalog}/${local.github_repo_name_catalog}//units/eks/addons/cilium/helm?ref=${local.version_catalog}"
+  path   = "eks/addons/cilium/helm"
+
+  values = {
+    version            = local.version_catalog
+    helm_chart_version = local.version_cilium
+    helm_values = {
+      # Chaining mode: layers onto vpc-cni instead of replacing it, for Hubble flow visibility and NetworkPolicy enforcement.
+      cni = {
+        chainingMode = "aws-cni"
+        exclusive    = false
+        # Chained mode: vpc-cni immediately takes over once the conflist is gone, so
+        # removing it on agent shutdown/uninstall doesn't leave nodes unmanaged.
+        uninstall = true
+      }
+      routingMode          = "native"
+      enableIPv4Masquerade = false
+      kubeProxyReplacement = false
+      # Cilium is the sole NetworkPolicy enforcer. vpc-cni's own enforcement stays
+      # disabled (EKS default), so the two don't conflict.
+      policyEnforcementMode = "default"
+      # L7 proxy, unneeded for L3/4 flow visibility, would add another DaemonSet per node.
+      envoy = {
+        enabled = false
+      }
+
+      # Background worker: no CPU limit, throttling the dataplane risks packet drops cluster-wide.
+      resources = {
+        requests = { cpu = "63m", memory = "273M" }
+        limits   = { memory = "273M" }
+      }
+
+      # Relay and UI on the MNG: Hubble stays up to troubleshoot Karpenter node networking
+      # even when no Karpenter node is healthy.
+      hubble = {
+        enabled = true
+        relay = {
+          enabled  = true
+          replicas = 1
+          # Web API: bursty with flow-query load, needs CPU headroom.
+          resources = {
+            requests = { cpu = "23m", memory = "50M" }
+            limits   = { cpu = "100m", memory = "50M" }
+          }
+          prometheus = {
+            serviceMonitor = { enabled = true }
+          }
+          nodeSelector = local.mng_node_selector
+          tolerations  = local.mng_tolerations
+        }
+        ui = {
+          enabled  = true
+          replicas = 1
+          backend = {
+            # Web API: bursty with dashboard usage.
+            resources = {
+              requests = { cpu = "49m", memory = "127M" }
+              limits   = { cpu = "200m", memory = "127M" }
+            }
+            securityContext = { readOnlyRootFilesystem = true }
+          }
+          frontend = {
+            # Lightweight idle: static assets, no burst shape to plan for.
+            resources = {
+              requests = { cpu = "11m", memory = "20Mi" }
+              limits   = { cpu = "11m", memory = "20Mi" }
+            }
+            # Safe with a read-only root: the chart already mounts an emptyDir at /tmp
+            # for nginx's cache/pid paths.
+            securityContext = { readOnlyRootFilesystem = true }
+          }
+          nodeSelector = local.mng_node_selector
+          tolerations  = local.mng_tolerations
+        }
+        metrics = {
+          # Dynamic exporter: metric changes hot reload without a cilium-agent restart. dns and
+          # http are excluded, both need the L7 proxy (envoy disabled above), and L7 visibility
+          # is a known limitation of aws-cni chaining mode.
+          enabled = []
+          dynamic = {
+            enabled = true
+            config = {
+              configMapName   = "cilium-dynamic-metrics-config"
+              createConfigMap = true
+              content = [
+                for name in ["drop", "tcp", "flow", "icmp", "policy", "port-distribution"] : {
+                  name = name
+                  contextOptions = concat(
+                    [
+                      { name = "sourceContext", values = ["workload-name", "dns", "reserved-identity"] },
+                      { name = "destinationContext", values = ["workload-name", "dns", "reserved-identity"] },
+                    ],
+                    name == "port-distribution" ? [] : [
+                      {
+                        name = "labelsContext"
+                        values = name == "policy" ? ["source_namespace", "destination_namespace"] : [
+                          "source_namespace", "destination_namespace", "traffic_direction"
+                        ]
+                      }
+                    ]
+                  )
+                }
+              ]
+            }
+          }
+          serviceMonitor = { enabled = true }
+          dashboards = {
+            enabled     = true
+            annotations = { grafana_folder = "Hubble" }
+          }
+        }
+      }
+
+      # Requires the ServiceMonitor CRD from prometheus_operator_crds.
+      prometheus = {
+        enabled        = true
+        serviceMonitor = { enabled = true }
+      }
+      dashboards = {
+        enabled     = true
+        annotations = { grafana_folder = "Cilium" }
+      }
+
+      # On the MNG: removes the agent-not-ready startup taint from Karpenter nodes, so it can't
+      # run on one itself.
+      operator = {
+        replicas = 2
+        # Chained CNI still needs a local cilium-agent to build the pod sandbox, and
+        # agents wait on the operator for CRDs: hostNetwork: false can deadlock a
+        # restart. true avoids the chained path, like cilium-agent itself.
+        hostNetwork     = true
+        securityContext = { readOnlyRootFilesystem = true }
+        # gops (started for pprof/debugging) writes its socket file under $HOME on boot;
+        # with a read-only root that write fails and the operator never starts.
+        extraVolumes      = [{ name = "gops", emptyDir = {} }]
+        extraVolumeMounts = [{ name = "gops", mountPath = "/home/gops" }]
+        prometheus = {
+          serviceMonitor = { enabled = true }
+        }
+        dashboards = {
+          enabled     = true
+          annotations = { grafana_folder = "Cilium" }
+        }
+        nodeSelector = local.mng_node_selector
+        tolerations  = local.mng_tolerations
+      }
+    }
+  }
+}
+
+# Restarts workloads whose pods started before cilium-agent (coredns, metrics-server, created
+# with the cluster), they'd have no CiliumEndpoint. Helm post hook: the apply blocks on it, so
+# Karpenter only installs once it's done.
+unit "cilium_cep_restart" {
+  source = "github.com/${local.github_owner_catalog}/${local.github_repo_name_catalog}//units/eks/addons/cilium/cep_restart?ref=${local.version_catalog}"
+  path   = "eks/addons/cilium/cep_restart"
+
+  values = {
+    version        = local.version_catalog
+    cilium_version = local.version_cilium
+    node_selector  = local.mng_node_selector
+    tolerations    = local.mng_tolerations
+  }
+}
+
 # --- Karpenter ---
 
 unit "karpenter_iam" {
@@ -848,6 +1030,7 @@ unit "karpenter_node_pool_critical" {
         effect = "NoSchedule"
       }
     ]
+    startup_taints = local.karpenter_node_pool_startup_taints
     disruption = {
       consolidationPolicy = "Balanced"
       consolidateAfter    = "15m"
@@ -891,6 +1074,7 @@ unit "karpenter_node_pool_elastic" {
         effect = "NoSchedule"
       }
     ]
+    startup_taints = local.karpenter_node_pool_startup_taints
     disruption = {
       consolidationPolicy = "WhenEmptyOrUnderutilized"
       consolidateAfter    = "2m"
