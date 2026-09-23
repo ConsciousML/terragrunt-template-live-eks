@@ -13,7 +13,7 @@ terragrunt stack generate
 terragrunt run --all apply --backend-bootstrap --non-interactive --no-stack-generate
 ```
 
-The deployment should take around 20 mins.
+The deployment should take around 30 minutes.
 
 While it runs, open [`live/staging/eks/stack/terragrunt.stack.hcl`](../live/staging/eks/stack/terragrunt.stack.hcl) and look at two places. First, `version_catalog` at the top of the `locals` block. Then, the `source` of the first [unit](/docs/iac/#units), `unit "vpc"`, right below `locals`:
 ```hcl
@@ -31,7 +31,7 @@ unit "vpc" {
 In `dev`, the catalog used units from its own local paths. Here, live pulls them from your catalog fork on GitHub, pinned to the `version_catalog` tag.
 
 ## Connect to the cluster
-When the deployment is done, connect `kubectl` to your `staging` EKS cluster (replace `<region-code>` by the region you set in [`live/staging/region.hcl`](/docs/deployment/live-repository-setup/#live-configuration)):
+When the deployment is done, connect `kubectl` to your `staging` EKS cluster (replace `<region-code>` with the region you set in [`live/staging/region.hcl`](/docs/deployment/live-repository-setup/#live-configuration)):
 ```bash
 aws eks update-kubeconfig --region <region-code> --name staging-cluster
 ```
@@ -64,7 +64,7 @@ podinfo                       Synced        Healthy
 ```
 
 ## Log in to ArgoCD
-Like in `dev`, ArgoCD is only reachable using Tailscale. Run `tailscale up` or click on the top-right button in the Tailscale Client.
+Like in `dev`, ArgoCD is only reachable using Tailscale. Connect to Tailscale by running `tailscale up`, or with the button in the Tailscale client.
 
 Open `https://argocd.private.staging.<base_domain>` in your browser (replace `<base_domain>` with the value from [`live/dns.hcl`](../live/dns.hcl)) and log in with username `admin`. Retrieve the password with:
 ```bash
@@ -74,13 +74,16 @@ aws secretsmanager get-secret-value \
   --output text | jq -r .plaintext
 ```
 
+You should see the same applications as in the `kubectl get app` output above.
+
 Notice the URL: `private.staging` instead of `private.dev`. Each [environment](/docs/iac/#environments) has its own EKS cluster, VPC, Terraform state, and DNS subdomain, so `dev` and `staging` can run side by side.
 
 ## Test the stack
-You can apply and destroy `staging` by hand, as you just did, but its main purpose is to test the full infrastructure end to end. Let's run the same tests as CI against the cluster you just deployed.
+You can apply and destroy `staging` by hand, as you just did, but its main purpose is to test the full infrastructure end to end. Now, run the same tests as CI against the cluster you just deployed.
 
-Keep Tailscale connected: the tests reach your private endpoints. From the root of your live fork, run:
+Keep Tailscale connected: the tests reach your private endpoints. From the root of your live fork, run the following, replacing `<region-code>` with the region you set in `live/staging/region.hcl`:
 ```bash
+export AWS_REGION=<region-code>
 go test -v -run '^TestStackExists$' ./tests/... -timeout 10m
 ```
 
@@ -96,10 +99,11 @@ What you just did by hand, [CI](/docs/ci-cd/) does automatically on pull request
 ## Destroy the infrastructure
 CI deploys to the same `staging` environment as you. Destroy your cluster before moving on, so it doesn't collide with CI in the next step.
 
-Like in `dev`, destroying the infrastructure removes the [Tailscale Connector](/docs/security/tailscale/#4-connector-and-split-dns), so you lose access to the cluster API. Before destroying the stack, disconnect from Tailscale by running `tailscale down` or click on the top-right button in the Tailscale Client.
+Like in `dev`, destroying the infrastructure removes the [Tailscale Connector](/docs/security/tailscale/#4-connector-and-split-dns), so you lose access to the cluster API. Before destroying the stack, disconnect from Tailscale by running `tailscale down`, or with the button in the Tailscale client.
 
 Finally, destroy the infrastructure by running the following commands from the root of your live fork:
 ```bash
+source .env
 cd live/staging/eks/stack
 terragrunt run --all destroy --non-interactive --no-stack-generate
 ```
