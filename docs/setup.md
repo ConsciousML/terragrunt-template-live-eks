@@ -72,7 +72,7 @@ You can also leave them as is if you plan to use `us-east-1`.
 These pipelines need to run only once per live fork before deploying to [`staging`](/docs/deployment/deploy-to-staging/) and [`prod`](/docs/deployment/promote-to-production/).
 :::
 
-We'll run the bootstrap pipelines from your live fork, as you did from your [catalog fork](/docs/quickstart/installation/#fork-the-eks-forge-catalog) in the [quickstart bootstrap](/docs/quickstart/bootstrap/).
+You'll run the bootstrap pipelines from your live fork, as you did from your [catalog fork](/docs/quickstart/installation/#fork-the-eks-forge-catalog) in the [quickstart bootstrap](/docs/quickstart/bootstrap/).
 
 They read the same environment variables as the catalog. Copy your catalog `.env` to the root of your live fork:
 ```bash
