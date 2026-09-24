@@ -103,41 +103,7 @@ locals {
 
 If the diff touches a shared `.hcl` file under `pipelines/`, port the change to its live counterpart. The [HCL configuration reference](/docs/reference/hcl_configuration/#layout) maps each catalog file to its live counterpart. Watch for renamed `locals`, not just added ones: every stack file that reads the old name breaks.
 
-Then apply the diff of [`pipelines/dev/eks/stack/terragrunt.stack.hcl`](https://github.com/ConsciousML/terragrunt-template-catalog-eks/blob/main/pipelines/dev/eks/stack/terragrunt.stack.hcl) to both stack files:
-- **Added unit**: copy its `unit` block, and rewrite its `source` from the local path to your catalog fork, pinned to `version_catalog`:
-  ```hcl
-  # dev
-  source = "${get_repo_root()}/units/<unit>"
-  # live
-  source = "github.com/${local.github_owner_catalog}/${local.github_repo_name_catalog}//units/<unit>?ref=${local.version_catalog}"
-  ```
-- **Removed unit**: CD doesn't destroy a unit whose block is gone, so its resources would stay in `prod` and keep being billed. Destroy it from `main`, while the stack still declares it. From the root of your live fork, set your changes aside and switch to `main`:
-  ```bash
-  git stash
-  git checkout main
-  ```
-
-  :::warning
-  This destroys the unit in `prod` directly, before your pull request is reviewed. If other units still depend on it, they break in `prod` until your bump is merged. Read the destroy plan carefully before confirming.
-  :::
-
-  Destroy the unit, replacing `<path>` with the unit's `path` in the stack file:
-  ```bash
-  source .env
-  cd live/prod/eks/stack
-  terragrunt stack generate
-  cd .terragrunt-stack/<path>
-  terragrunt destroy
-  ```
-  Then return to your branch and restore your changes:
-  ```bash
-  cd "$(git rev-parse --show-toplevel)"
-  git checkout <branch>
-  git stash pop
-  ```
-  Delete its `unit` block. If other units depend on it, update them in the same bump.
-- **Changed unit**: carry over its new or changed `values`.
-- **Changed `version_*` local**: set the same module or chart version.
+Then apply the diff of [`pipelines/dev/eks/stack/terragrunt.stack.hcl`](https://github.com/ConsciousML/terragrunt-template-catalog-eks/blob/main/pipelines/dev/eks/stack/terragrunt.stack.hcl) to both stack files, following the sections below for each added, removed, or changed unit.
 
 Don't adopt a value marked `# DEV:`, it only applies to [`dev`](/docs/iac/#dev). Keep live's own lines, marked `# STAGING:` or `# PROD:`, instead. For example, `dev` disables control plane logging, while `prod` keeps it:
 ```hcl
@@ -152,6 +118,26 @@ enabled_log_types = ["api"]
 ```
 
 Which values are marked can change between tags, so re-read the `# DEV:` comments on every bump.
+
+### Added Units
+
+Copy the unit's `unit` block, and rewrite its `source` from the local path to your catalog fork, pinned to `version_catalog`:
+```hcl
+# dev
+source = "${get_repo_root()}/units/<unit>"
+# live
+source = "github.com/${local.github_owner_catalog}/${local.github_repo_name_catalog}//units/<unit>?ref=${local.version_catalog}"
+```
+
+### Removed Units
+
+Delete the unit's `unit` block, and note its `path` for later. If other units depend on it, carry over the changes that drop those dependencies in the same bump.
+
+CD doesn't destroy a unit whose block is gone, so its resources stay in `prod` and keep being billed. You destroy it once CD has applied the bump, see [Destroy Removed Units](#destroy-removed-units).
+
+### Changed Units
+
+Carry over the unit's new or changed `values`. If a `version_*` local changed, set the same module or chart version.
 
 ## Roll Out to Staging and Prod
 
@@ -178,3 +164,16 @@ gh pr merge --merge --subject "bump(catalog): to <new-tag>"
 ```
 
 Merging to `main` triggers CD, which applies the bump to `prod`. See [Deploy to Production](/docs/deployment/promote-to-production/#deploy-to-production) to check the deployment.
+
+## Destroy Removed Units
+
+If the bump removed units, destroy them in `prod` once CD succeeds. At that point, no unit left in `prod` depends on them.
+
+From the root of your live fork, check out the commit on `main` just before your merge, where the stack still declares them. Then destroy each removed unit, replacing `<path>` with the unit's `path` you noted:
+```bash
+source .env
+cd live/prod/eks/stack
+terragrunt stack generate
+cd .terragrunt-stack/<path>
+terragrunt destroy
+```
