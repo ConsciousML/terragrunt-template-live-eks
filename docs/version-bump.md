@@ -1,6 +1,6 @@
 {/* This doc is aggregated into the EKS Forge documentation site: https://eks-forge.readthedocs.io/latest/. It is not meant to be read directly in this repository. */}
 
-This guide shows you how to point [`staging`](/docs/iac/#staging) and [`prod`](/docs/iac/#prod) at a new catalog tag, and align your [live fork](/docs/deployment/live-repository-setup/#fork-the-live-repository) with what changed in the catalog since your last bump. It assumes you've already pushed the tag from your catalog fork, see [Tag a Catalog Release](/docs/iac/add-a-unit/#tag-a-catalog-release).
+This guide shows you how to point [`staging`](/docs/iac/#staging) and [`prod`](/docs/iac/#prod) at a new catalog tag, and align your [live fork](/docs/deployment/live-repository-setup/#fork-the-live-repository) with what changed in the catalog since your last bump. It assumes you've already pushed the tag from your catalog fork. If not, see [Tag a Catalog Release](/docs/iac/add-a-unit/#tag-a-catalog-release).
 
 First, create a branch in your live fork:
 ```bash
@@ -36,6 +36,11 @@ If the catalog changed a tool version in `mise.toml`, set the same version in yo
 ```toml
 [tools]
 terragrunt = "1.1.3" # match the catalog's version
+```
+
+Then install the new versions locally:
+```bash
+mise install
 ```
 
 Skip tools that only exist in the catalog's `mise.toml`, such as `tflint` and `trivy`. They serve catalog development, not live.
@@ -77,14 +82,16 @@ cd live/bootstrap
 terragrunt run --all plan
 ```
 
+:::warning
+This apply runs before your pull request is reviewed, because CI needs what the bootstrap pipelines create, such as GitHub Actions secrets. Some are shared by `staging` and `prod`, so a mistake here reaches `prod`. Read the plan carefully before applying.
+:::
+
 If the plan shows changes, apply them:
 ```bash
 terragrunt run --all apply --non-interactive
 ```
 
 ## Update the EKS Stacks
-
-If the diff touches a shared `.hcl` file under `pipelines/`, port the change to its live counterpart, see the file mapping in the [HCL configuration reference](/docs/reference/hcl_configuration/#layout). Watch for renamed `locals`, not just added ones: every stack file that reads the old name breaks.
 
 Set `version_catalog` to the new tag at the top of both [`live/staging/eks/stack/terragrunt.stack.hcl`](../live/staging/eks/stack/terragrunt.stack.hcl) and [`live/prod/eks/stack/terragrunt.stack.hcl`](../live/prod/eks/stack/terragrunt.stack.hcl), replacing `<new-tag>`:
 ```hcl
@@ -94,6 +101,8 @@ locals {
 }
 ```
 
+If the diff touches a shared `.hcl` file under `pipelines/`, port the change to its live counterpart. The [HCL configuration reference](/docs/reference/hcl_configuration/#layout) maps each catalog file to its live counterpart. Watch for renamed `locals`, not just added ones: every stack file that reads the old name breaks.
+
 Then apply the diff of [`pipelines/dev/eks/stack/terragrunt.stack.hcl`](https://github.com/ConsciousML/terragrunt-template-catalog-eks/blob/main/pipelines/dev/eks/stack/terragrunt.stack.hcl) to both stack files:
 - **Added unit**: copy its `unit` block, and rewrite its `source` from the local path to your catalog fork, pinned to `version_catalog`:
   ```hcl
@@ -102,7 +111,17 @@ Then apply the diff of [`pipelines/dev/eks/stack/terragrunt.stack.hcl`](https://
   # live
   source = "github.com/${local.github_owner_catalog}/${local.github_repo_name_catalog}//units/<unit>?ref=${local.version_catalog}"
   ```
-- **Removed unit**: CD doesn't destroy a unit whose block is gone, so its resources would stay in `prod` and keep being billed. From `main`, while the stack still declares it, destroy it first, replacing `<path>` with the unit's `path` in the stack file:
+- **Removed unit**: CD doesn't destroy a unit whose block is gone, so its resources would stay in `prod` and keep being billed. Destroy it from `main`, while the stack still declares it. From the root of your live fork, set your changes aside and switch to `main`:
+  ```bash
+  git stash
+  git checkout main
+  ```
+
+  :::warning
+  This destroys the unit in `prod` directly, before your pull request is reviewed. If other units still depend on it, they break in `prod` until your bump is merged. Read the destroy plan carefully before confirming.
+  :::
+
+  Destroy the unit, replacing `<path>` with the unit's `path` in the stack file:
   ```bash
   source .env
   cd live/prod/eks/stack
@@ -110,7 +129,13 @@ Then apply the diff of [`pipelines/dev/eks/stack/terragrunt.stack.hcl`](https://
   cd .terragrunt-stack/<path>
   terragrunt destroy
   ```
-  Then delete its `unit` block. If other units depend on it, update them in the same bump.
+  Then return to your branch and restore your changes:
+  ```bash
+  cd "$(git rev-parse --show-toplevel)"
+  git checkout <branch>
+  git stash pop
+  ```
+  Delete its `unit` block. If other units depend on it, update them in the same bump.
 - **Changed unit**: carry over its new or changed `values`.
 - **Changed `version_*` local**: set the same module or chart version.
 
@@ -138,8 +163,8 @@ git push -u origin <branch>
 ```
 
 Open a pull request with the label that fits your bump, so CI can pass its `check-pr-labels` job:
-- `run-terratest`: deploys `staging`, tests it end to end, and destroys it. Use it for any bump that changes the stacks.
-- `skip-terratest`: skips the `staging` tests.
+- `run-terratest`: deploys `staging`, tests it end to end, and destroys it. Use it by default.
+- `skip-terratest`: skips the `staging` tests. Use it only if the catalog changed nothing but docs since your last tag.
 
 ```bash
 gh pr create --title "bump(catalog): to <new-tag>" --body "Bump the catalog to <new-tag>." --label run-terratest # or skip-terratest
