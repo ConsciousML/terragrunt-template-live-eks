@@ -45,16 +45,16 @@ mise install
 
 Skip tools that only exist in the catalog's `mise.toml`, such as `tflint` and `trivy`. They serve catalog development, not live.
 
-If the catalog added a variable to `.env.example`, add it to your live `.env.example` and set it in your `.env`. Point its comment at the variable's entry in the [environment variables reference](/docs/reference/environment_variable/), like the existing ones:
+If the catalog added a variable to `.env.example`, check what uses it in the [environment variables reference](/docs/reference/environment_variable/). Skip it if only `dev` or an account-level pipeline that already ran from your catalog fork uses it, such as `APP_OF_APPS_BRANCH` or `BILLING_ANOMALY_MONITOR_ARN`. Otherwise, add it to your live `.env.example` and set it in your `.env`. Point its comment at the variable's entry in the reference, like the existing ones:
 ```bash
-# See https://github.com/ConsciousML/terragrunt-template-catalog-eks/blob/main/docs/environment-variables.md#eks_local_admin_arn
-export EKS_LOCAL_ADMIN_ARN=
+# See https://github.com/ConsciousML/terragrunt-template-catalog-eks/blob/main/docs/environment-variables.md#slack_bot_token
+export SLACK_BOT_TOKEN=
 ```
 
 If CI or CD needs the variable, create a [bootstrap pipeline](/docs/quickstart/bootstrap/) that writes it as a GitHub Actions secret, or update an existing one. Then pass the secret in the `env` of every step that runs Terragrunt, in [`.github/workflows/ci.yaml`](../.github/workflows/ci.yaml) and [`.github/workflows/cd.yaml`](../.github/workflows/cd.yaml):
 ```yaml
 env:
-  EKS_LOCAL_ADMIN_ARN: ${{ secrets.EKS_LOCAL_ADMIN_ARN }}
+  SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
 ```
 
 ## Align the CI Setup
@@ -63,7 +63,7 @@ The catalog's [`ci.yaml`](https://github.com/ConsciousML/terragrunt-template-cat
 
 ## Update the Bootstrap Pipelines
 
-Set `version` to the new tag at the top of every `live/bootstrap/*/terragrunt.stack.hcl`, replacing `<new-tag>`:
+Set `version` to the new tag at the top of every `terragrunt.stack.hcl` under `live/bootstrap/`, including the nested ones such as `setup_dns/prod/stack/`, replacing `<new-tag>`:
 ```hcl
 locals {
   version = "<new-tag>"
@@ -71,7 +71,7 @@ locals {
 }
 ```
 
-If the diff touches `pipelines/bootstrap/`, port the changes to `live/bootstrap/`:
+If the diff touches `pipelines/bootstrap/`, port the changes to `live/bootstrap/`. Where the catalog has one stack per environment, as under `setup_dns/` and `slack/channels/`, its `dev/` and `ci/` folders correspond to live's `staging/` and `prod/`, so port a change to both:
 - **New pipeline**: read its page under [Bootstrap Pipelines](/docs/quickstart/bootstrap/) first. Skip it if it's account-level, like [AWS Service Quotas](/docs/quickstart/bootstrap/aws_service_quotas), since it already ran from your catalog fork, or if it's marked dev-only or CI-only.
 - **Changed pipeline**: carry over its restructured stacks, renamed units, and changed `values`.
 
@@ -176,4 +176,9 @@ cd live/prod/eks/stack
 terragrunt stack generate
 cd .terragrunt-stack/<path>
 terragrunt destroy
+```
+
+Then return to `main`:
+```bash
+git checkout main
 ```
