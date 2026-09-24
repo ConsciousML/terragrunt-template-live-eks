@@ -13,5 +13,6 @@ here. It applies as written.
 - **Layer-index** (what a whole directory of things is): `README.md`
 - **Operational guide** (procedural, task-oriented): `docs/ci-cd.md`, `docs/new-environment.md`,
   `docs/troubleshoot.md`, `docs/version-bump.md`
-- **Config inventory** (file-by-file breakdown of what a directory of HCL resolves):
-  `docs/configuration-files.md`
+- **Config inventory** (file-by-file breakdown of the shared HCL files in the catalog and live):
+  lives in the catalog repo, published at
+  https://eks-forge.readthedocs.io/latest/docs/reference/hcl_configuration/

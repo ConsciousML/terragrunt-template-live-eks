@@ -30,7 +30,7 @@ After adopting any changes, run `terragrunt plan` against each affected live boo
 
 ## 5. Check Shared HCL Files
 
-Check shared HCL files for structural changes, including renames of shared locals, not just additions, since a rename ripples into every stack and bootstrap file reading that file's locals. See the "Catalog Equivalents" section of [`configuration-files.md`](configuration-files.md) for the full catalog-to-live file mapping to diff.
+Check shared HCL files for structural changes, including renames of shared locals, not just additions, since a rename ripples into every stack and bootstrap file reading that file's locals. See the [HCL configuration reference](/docs/reference/hcl_configuration/#layout) for the full catalog-to-live file mapping to diff.
 
 
 ## 6. Bump `version_catalog` in Stack Files
