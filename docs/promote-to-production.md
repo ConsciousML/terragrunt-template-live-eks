@@ -1,14 +1,10 @@
 {/* This doc is aggregated into the EKS Forge documentation site: https://eks-forge.readthedocs.io/latest/. It is not meant to be read directly in this repository. */}
 # Promote to Production
 
-In this tutorial, you'll promote a new catalog version to `prod` the same way you would in real life: through a pull request. You'll tag your catalog fork, bump `version_catalog` in a pull request, watch [CI](/docs/ci-cd/) test it on `staging`, and merge it so CD deploys `prod`. Finally, you'll destroy `prod`.
+Now that you've [tested `staging` by hand](/docs/deployment/deploy-to-staging/#test-the-stack), you're ready to promote a new catalog version to `prod` through a pull request. You'll tag your catalog fork, bump `version_catalog` in a pull request, watch [CI](/docs/ci-cd/) test it on `staging`, and merge it so CD deploys `prod`. Finally, you'll destroy `prod`.
 
-CI takes around 1 hour and CD around 30 minutes.
-
-## Tag the catalog
-For a real release, you'd tag your catalog fork after merging new changes to its `main`. Here, you'll tag your catalog fork's `main` as is, to focus on the promotion workflow.
-
-From the root of your [catalog fork](/docs/quickstart/installation/#fork-the-eks-forge-catalog), create the tag and push it:
+## Tag the Catalog
+From the root of your [catalog fork](/docs/quickstart/installation/#fork-the-eks-forge-catalog), tag `main` and push the tag:
 ```bash
 git checkout main
 git pull
@@ -16,7 +12,7 @@ git tag v0.1.8-demo
 git push origin v0.1.8-demo
 ```
 
-## Bump the catalog version
+## Bump the Catalog Version
 From the root of your [live fork](/docs/deployment/live-repository-setup/#fork-the-live-repository), create a branch:
 ```bash
 git checkout -b promote-demo
@@ -32,10 +28,10 @@ locals {
 
 Commit your change, push the branch, and open a pull request:
 ```bash
-git commit -am "feat: bump catalog to v0.1.8-demo"
+git commit -am "bump(catalog): to v0.1.8-demo"
 git push -u origin promote-demo
 gh pr create \
-  --title "feat: bump catalog to v0.1.8-demo" \
+  --title "bump(catalog): to v0.1.8-demo" \
   --body "Promote catalog v0.1.8-demo to staging and prod."
 ```
 
@@ -49,7 +45,7 @@ CI also posted a **Production Plan Available** comment. Click the link to downlo
 Plan: <n> to add, 0 to change, 0 to destroy.
 ```
 
-## Run the tests
+## Run the Tests
 Your repository doesn't have the `run-terratest` label yet. Create it, along with `skip-terratest` to skip the tests and `skip-cd` to skip the `prod` deployment on merge:
 ```bash
 gh label create run-terratest
@@ -57,17 +53,17 @@ gh label create skip-terratest
 gh label create skip-cd
 ```
 
-Add the `run-terratest` label to your pull request. Adding a label doesn't trigger CI, so rerun its failed jobs, selecting your `CI` run when prompted:
+Add the `run-terratest` label to your pull request. Adding a label doesn't trigger CI, so rerun the failed jobs of your latest `CI` run:
 ```bash
 gh pr edit --add-label run-terratest
-gh run rerun --failed
+gh run rerun --failed $(gh run list --workflow CI --branch promote-demo --limit 1 --json databaseId --jq '.[0].databaseId')
 ```
 
-Back in the **Actions** tab, `check-pr-labels` now passes and the `terratest` job starts. It deploys `staging`, runs the same tests you ran by hand in [Deploy to Staging](/docs/deployment/deploy-to-staging/#test-the-stack), and destroys it. See [Testing in CI/CD](/docs/ci-cd/testing/) for details.
+Back in the **Actions** tab, `check-pr-labels` now passes and the `terratest` job starts. It deploys `staging`, runs the same tests you ran by hand in [Deploy to Staging](/docs/deployment/deploy-to-staging/#test-the-stack), and destroys it. See [Testing in CI/CD](/docs/ci-cd/testing/) for details. CI should take around 1 hour.
 
 When every job is green, your pull request is ready to merge.
 
-## Deploy to production
+## Deploy to Production
 Merge your pull request:
 ```bash
 gh pr merge --merge --subject "bump(catalog): to v0.1.8-demo"
@@ -75,7 +71,7 @@ gh pr merge --merge --subject "bump(catalog): to v0.1.8-demo"
 
 Merging to `main` triggers CD. In the **Actions** tab, you should see a `CD` run applying the `prod` stack. The deployment should take around 30 minutes.
 
-## Check the production cluster
+## Check the Production Cluster
 When CD is done, connect `kubectl` to your `prod` EKS cluster (replace `<region-code>` with the region you set in [`live/prod/region.hcl`](/docs/deployment/live-repository-setup/#live-configuration)):
 ```bash
 aws eks update-kubeconfig --region <region-code> --name prod-cluster
@@ -96,9 +92,11 @@ podinfo                       Synced        Healthy
 ...
 ```
 
-Your `prod` tools are also private. Connect to Tailscale by running `tailscale up`, and open Prometheus at `https://prometheus.private.prod.<base_domain>` (replace `<base_domain>` with the value from [`live/dns.hcl`](../live/dns.hcl)). Notice the `private.prod` subdomain: `prod` gets its own, like `staging` and `dev`.
+Your `prod` tools are also private. Connect to Tailscale by running `tailscale up`, and open Prometheus at `https://prometheus.private.prod.<base_domain>` (replace `<base_domain>` with the value from [`live/dns.hcl`](../live/dns.hcl)). You should see the Prometheus query page.
 
-## Destroy production
+Notice the `private.prod` subdomain: `prod` gets its own, like `staging` and `dev`.
+
+## Destroy Production
 Like in `staging`, destroying the infrastructure removes the [Tailscale Connector](/docs/security/tailscale/#4-connector-and-split-dns), so you lose access to the cluster API. Before destroying the stack, disconnect from Tailscale by running `tailscale down`, or with the button in the Tailscale client.
 
 Then, switch to `main` to get the code CD deployed, and destroy the infrastructure by running the following commands from the root of your live fork:
@@ -113,5 +111,12 @@ terragrunt run --all destroy --non-interactive --no-stack-generate
 
 Keep the `v0.1.8-demo` tag in your catalog fork: `main` now pins it, and CI and CD need it on your next pull request.
 
-## What's next
+## What's Next
 Learn [how to add an IaC component to your stack](/docs/iac/add-an-iac-component/), then promote it the same way.
+
+## Remove EKS Forge
+:::warning
+Your live fork's CI and CD rely on the bootstrap resources. Don't remove them if you plan to keep deploying `staging` and `prod`.
+:::
+
+Only if you want to remove EKS Forge from your AWS account entirely, follow [How to Remove EKS Forge](/docs/iac/remove-eks-forge/).

@@ -3,7 +3,7 @@
 
 Now that you've [forked](/docs/deployment/live-repository-setup/#fork-the-live-repository) and [configured](/docs/deployment/live-repository-setup/#live-configuration) the live repository, installed its [CLI tools](/docs/deployment/live-repository-setup/#install-the-cli-tools), and run the [bootstrap pipelines](/docs/deployment/live-repository-setup/#bootstrap), you're ready to deploy the EKS stack in the [`staging` environment](/docs/iac/#staging).
 
-## Run the Terragrunt stack
+## Run the Terragrunt Stack
 From the root of your live fork, run the following commands to deploy the `staging` environment:
 
 ```bash
@@ -30,7 +30,7 @@ unit "vpc" {
 
 In `dev`, the catalog used units from its own local paths. Here, live pulls them from your catalog fork on GitHub, pinned to the `version_catalog` tag.
 
-## Connect to the cluster
+## Connect to the Cluster
 When the deployment is done, connect `kubectl` to your `staging` EKS cluster (replace `<region-code>` with the region you set in [`live/staging/region.hcl`](/docs/deployment/live-repository-setup/#live-configuration)):
 ```bash
 aws eks update-kubeconfig --region <region-code> --name staging-cluster
@@ -63,7 +63,7 @@ podinfo                       Synced        Healthy
 ...
 ```
 
-## Log in to ArgoCD
+## Log In to ArgoCD
 Like in `dev`, ArgoCD is only reachable using Tailscale. Connect to Tailscale by running `tailscale up`, or with the button in the Tailscale client.
 
 Open `https://argocd.private.staging.<base_domain>` in your browser (replace `<base_domain>` with the value from [`live/dns.hcl`](../live/dns.hcl)) and log in with username `admin`. Retrieve the password with:
@@ -78,7 +78,7 @@ You should see the same applications as in the `kubectl get app` output above.
 
 Notice the URL: `private.staging` instead of `private.dev`. Each [environment](/docs/iac/#environments) has its own EKS cluster, VPC, Terraform state, and DNS subdomain, so `dev` and `staging` can run side by side.
 
-## Test the stack
+## Test the Stack
 You can apply and destroy `staging` by hand, as you just did, but its main purpose is to test the full infrastructure end to end. Now, run the same tests as CI against the cluster you just deployed.
 
 Keep Tailscale connected: the tests reach your private endpoints. From the root of your live fork, run the following, replacing `<region-code>` with the region you set in `live/staging/region.hcl`:
@@ -96,7 +96,7 @@ PASS
 
 What you just did by hand, [CI](/docs/ci-cd/) does automatically on pull requests: it deploys `staging`, runs these same tests with [Terratest](https://terratest.gruntwork.io/), and destroys it. This way, you only merge changes that deploy a working infrastructure.
 
-## Destroy the infrastructure
+## Destroy the Infrastructure
 CI deploys to the same `staging` environment as you. Destroy your cluster before moving on, so it doesn't collide with CI in the next step.
 
 Like in `dev`, destroying the infrastructure removes the [Tailscale Connector](/docs/security/tailscale/#4-connector-and-split-dns), so you lose access to the cluster API. Before destroying the stack, disconnect from Tailscale by running `tailscale down`, or with the button in the Tailscale client.
@@ -108,5 +108,5 @@ cd live/staging/eks/stack
 terragrunt run --all destroy --non-interactive --no-stack-generate
 ```
 
-## What's next
+## What's Next
 [Promote your changes to production](/docs/deployment/promote-to-production/) through a pull request.
