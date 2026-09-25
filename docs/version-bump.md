@@ -2,6 +2,8 @@
 
 This guide shows you how to point [`staging`](/docs/iac/#staging) and [`prod`](/docs/iac/#prod) at a new catalog tag, and align your [live fork](/docs/deployment/live-repository-setup/#fork-the-live-repository) with what changed in the catalog since your last bump. It assumes you've already pushed the tag from your catalog fork. If not, see [Tag a Catalog Release](/docs/iac/add-a-unit/#tag-a-catalog-release).
 
+To change `staging` or `prod` without a new tag, see [How to Edit the Live Configuration](/docs/iac/edit-live-configuration/) instead.
+
 First, create a branch in your live fork:
 ```bash
 git checkout -b <branch>
