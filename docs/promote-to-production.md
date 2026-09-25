@@ -112,7 +112,7 @@ terragrunt run --all destroy --non-interactive --no-stack-generate
 Keep the `v0.1.8-demo` tag in your catalog fork: `main` now pins it, and CI and CD need it on your next pull request.
 
 ## What's Next
-Learn [how to add or edit a unit in your stack](/docs/iac/add-a-unit/), then promote it the same way.
+Learn [how to add, edit, or remove a unit in your stack](/docs/iac/add-a-unit/), then promote it the same way.
 
 ## Remove EKS Forge
 :::warning

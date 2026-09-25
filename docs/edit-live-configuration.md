@@ -5,7 +5,7 @@ This guide shows you how to change the configuration of [`staging`](/docs/iac/#s
 - The shared `.hcl` files.
 - The bootstrap pipelines.
 
-You don't change any unit's code, so the catalog stays the same and you don't need to tag a new version. To change a unit's code, see [Add or Edit a Unit](/docs/iac/add-a-unit/) instead.
+You don't change any unit's code, so the catalog stays the same and you don't need to tag a new version. To change a unit's code, see [Add, Edit, or Remove a Unit](/docs/iac/add-a-unit/) instead.
 
 First, create a branch in your live fork:
 ```bash
