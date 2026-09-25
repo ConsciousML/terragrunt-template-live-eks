@@ -33,7 +33,7 @@ The `.hcl` files at the root of `live/`, such as [`dns.hcl`](../live/dns.hcl) an
 
 ## Edit the Bootstrap Configuration
 
-Each [bootstrap pipeline](/docs/deployment/live-repository-setup/#bootstrap) has its own stack file under `live/bootstrap/<pipeline>/`. Edit the `values` of its units there, the same way as in the EKS stacks. Pipelines with one stack per environment, such as `setup_dns/` and `slack/channels/`, have a `staging/` and a `prod/` folder: make the same change in both. See the [bootstrap reference](/docs/reference/bootstrap/) for each pipeline's inputs.
+Each [bootstrap pipeline](/docs/deployment/live-repository-setup/#bootstrap) has its own stack file under `live/bootstrap/<pipeline>/`. Edit its stack or unit `values` there, the same way as in the EKS stacks. Pipelines with one stack per environment, such as `setup_dns/` and `slack/channels/`, have a `staging/` and a `prod/` folder: make the same change in both. See the [bootstrap reference](/docs/reference/bootstrap/) for each pipeline's inputs.
 
 CI and CD never apply the bootstrap pipelines, so you apply your change yourself. From the root of your live fork, plan all of them at once:
 ```bash
@@ -77,4 +77,4 @@ Merging to `main` triggers CD, which applies your change to `prod`. See [Deploy 
 
 ## Destroy Removed Units
 
-If you deleted a `unit` block, CD doesn't destroy its resources, so they stay in `prod` and keep being billed. Destroy them once CD succeeds, see [Destroy Removed Units](/docs/iac/bump-the-catalog-version/#destroy-removed-units).
+If you delete a `unit` block, see [Removed Units](/docs/iac/bump-the-catalog-version/#removed-units).
