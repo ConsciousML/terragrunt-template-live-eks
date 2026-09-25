@@ -1,6 +1,11 @@
 {/* This doc is aggregated into the EKS Forge documentation site: https://eks-forge.readthedocs.io/latest/. It is not meant to be read directly in this repository. */}
 
-This guide shows you how to change the configuration of [`staging`](/docs/iac/#staging) and [`prod`](/docs/iac/#prod) from your [live fork](/docs/deployment/live-repository-setup/#fork-the-live-repository). You only change the `values` your [units](/docs/iac/#units) receive, not their code, so the catalog stays the same and you don't need to tag a new version. To change a unit's code, see [Add or Edit a Unit](/docs/iac/add-a-unit/) instead.
+This guide shows you how to change the configuration of [`staging`](/docs/iac/#staging) and [`prod`](/docs/iac/#prod) from your [live fork](/docs/deployment/live-repository-setup/#fork-the-live-repository):
+- The `values` your [units](/docs/iac/#units) receive.
+- The shared `.hcl` files.
+- The bootstrap pipelines.
+
+You don't change any unit's code, so the catalog stays the same and you don't need to tag a new version. To change a unit's code, see [Add or Edit a Unit](/docs/iac/add-a-unit/) instead.
 
 First, create a branch in your live fork:
 ```bash
@@ -26,6 +31,8 @@ If a value should differ between the two, mark it with a `# STAGING:` or `# PROD
 # PROD: dev disables VPC flow logs to cut cost, prod enables them.
 enable_flow_log = true
 ```
+
+If you delete a `unit` block, see [Removed Units](/docs/iac/bump-the-catalog-version/#removed-units) first: you need its `path` to destroy its resources once CD has applied your change.
 
 ## Edit the Shared Configuration
 
@@ -75,6 +82,4 @@ gh pr merge --merge
 
 Merging to `main` triggers CD, which applies your change to `prod`. See [Deploy to Production](/docs/deployment/promote-to-production/#deploy-to-production) to check the deployment.
 
-## Destroy Removed Units
-
-If you delete a `unit` block, see [Removed Units](/docs/iac/bump-the-catalog-version/#removed-units).
+If you deleted a `unit` block from the EKS stacks, destroy it in `prod` once CD succeeds, see [Destroy Removed Units](/docs/iac/bump-the-catalog-version/#destroy-removed-units).
